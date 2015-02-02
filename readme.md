@@ -39,13 +39,13 @@ func main() {
 * [Contents](#contents)
 * [Installation](#installation)
 * [API Reference](#api-reference)
-  * [NewTraits()](#newtraitsstring-traits-error)
-  * [NewState()](#newstatestring-state-error)
   * [Words()](#wordsstring-set-error)
   * [WordsN()](#wordsnstring-int-set-error)
   * [type Traits](#type-traits)
+    * [NewTraits()](#newtraitsstring-traits-error)
     * [Traits.Words()](#traitswords-set-error)
   * [type State](#type-state)
+    * [NewState()](#newstatestring-state-error)
     * [State.Words()](#statewords-set)
     * [State.WordsN()](#statewordsnint-set)
   * [type Set](#type-set)
@@ -88,28 +88,7 @@ go test -bench .
 
 ## API Reference
 
-### `NewTraits([]string) (*Traits, error)`
-
-Analyses the given group of sample words and returns a `Traits` object with
-their shared characteristics. The traits define a set of synthetic words that
-may be derived from them. The entire set may be retrieved with `Traits.Words()`,
-but due to a combinatorial explosion, it's too big and takes too long to
-calculate to be useful. Generally, you want to use `WordsN()` and
-`State.WordsN()` instead.
-
-### `NewState([]string) (*State, error)`
-
-Takes a group of sample words, generates their shared characteristics via
-`NewTraits()`, and makes a `State` object that encapsulates those traits. See
-the [`State`](#type-state) reference for this type's purpose and methods.
-
-```golang
-state, err := NewState([]string{"lava", "ridge", "rock"})
-```
-
 ### `Words([]string) (Set, error)`
-
-Somewhat equivalent to `traits, _ := NewTraits([]string); traits.Words()`.
 
 Returns the entire set of synthetic words that may be derived from the given
 sample. Beware: passing more than just a handful of words leads to a
@@ -125,17 +104,17 @@ fmt.Println(words)
 // {"smobli", "smoblin", "smoke", "goke", "gobli", "moke", "mobli", "goblin", "obli", "oblin", "oke", "moblin"}
 ```
 
-See the [`Set`](#type-set) reference.
+See the [`Set`](#type-set) reference for how to handle the results.
 
 ### `WordsN([]string, int) (Set, error)`
 
-Somewhat equivalent to `state, _ := NewState([]string); state.WordsN(int)`.
-
 Returns a random sample from the set of synthetic words that may be derived from
 the given words, limited to the given count. The sequence is guaranteed to be
-duplicate-free. Unlike `Words()`, this remains very fast even for large
-datasets, and is suitable for use on a web server or another application where
-responses must be quick.
+duplicate-free.
+
+Unlike `Words()`, this remains very fast even for large datasets, and is
+suitable for use on a web server or another application where responses must be
+quick.
 
 ```golang
 words, err := WordsN([]string{"goblin", "smoke"}, 4)
@@ -143,7 +122,7 @@ fmt.Println(words)
 // {"mobli", "smobli", "obli", "smoblin"}
 ```
 
-See the [`Set`](#type-set) reference.
+See the [`Set`](#type-set) reference for how to handle the results.
 
 ### `type Traits`
 
@@ -167,15 +146,27 @@ type Traits struct {
 ```
 
 `Traits` represent rudimental characteristics of a word or group of words, and
-are central to the package's functionality. Each function exposed by the package
-takes a group of words and examines them, extracting their shared traits. A
-combination of traits unequivocally defines a set of synthetic words that may be
+are central to the package's functionality. Word generation always begins by
+examining the source words and extracting their shared traits.
+
+A traits object unequivocally defines a set of synthetic words that may be
 derived from them. This set may be retrieved with `Traits.Words()`.
 
 A traits object is stateless, and the `Traits.Words()` method is pure, meaning
 that is has no side effects and is guaranteed to produce the same (unordered)
 set on repeated calls. A transient traits object is used internally by the
 static `Words()` function.
+
+#### `NewTraits([]string) (*Traits, error)`
+
+Analyses the given group of sample words and returns a [`Traits`](#type-traits)
+object with their shared characteristics. After getting hold of a traits object,
+you can apply custom restrictions on its derived words by editing its fields.
+This is also true for a traits object embedded in a `State`.
+
+```golang
+traits, err := NewTraits([]string{"mountain", "waterfall", "grotto"})
+```
 
 #### `Traits.Words() (Set, error)`
 
@@ -202,14 +193,25 @@ type State struct {
 A `State` object is a superset of `Traits` that maintains an internal state.
 It's used for generating small samples from the set of synthetic words defined
 by its traits through its `State.WordsN()` method. Statefulness allows it to
-guarantee that no word is ever repeated. Both generator methods provided by a
-state share the same virtual pool of words, and may be used interchangeably
-until the entire set has been exhausted.
+guarantee that no word is ever repeated. A state's generator methods share the
+same virtual pool of words, and may be used interchangeably until the entire set
+has been exhausted.
 
 A state must always be obtained through a `NewState()` call, or given a valid
 `Traits` object if created manually. Its behaviour without traits is undefined.
+It internal `Traits` object may be edited to apply custom restrictions on the
+derived words.
 
 A transient state object is used internally by the static `WordsN()` function.
+
+#### `NewState([]string) (*State, error)`
+
+Takes a group of sample words, generates their shared characteristics via
+`NewTraits()`, and makes a `State` object that encapsulates those traits.
+
+```golang
+state, err := NewState([]string{"lava", "ridge", "rock"})
+```
 
 #### `State.Words() Set`
 
