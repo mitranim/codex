@@ -20,6 +20,7 @@ func main() {
 
   fmt.Println(sample)
   fmt.Println("total:", len(total))
+  fmt.Println(err)
 
   /*
     {
@@ -27,6 +28,7 @@ func main() {
       "kasmine", "katiko", "rikasmi", "mikatin", "natie", "natika",
     }
     total: 180
+    <nil>
   */
 }
 ```
