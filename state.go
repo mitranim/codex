@@ -79,7 +79,11 @@ func (this *State) WordsN(num int) (words Set) {
 // complete words. The principle is the same as Traits.walk(), with the
 // difference that visited parts of the virtual tree are cached inside the
 // state. This lets us avoid recalculating validity of partial words and calling
-// the iterator on previously used paths.
+// the iterator on previously used paths. Another difference is that unlike
+// Traits.walk(), this method randomises the iteration order both horizontally
+// (when selecting which child node to visit from the current node) and
+// vertically (the iterator function is called on subpaths in a branch in random
+// order).
 //
 // The state's internal tree plays three roles here:
 //   1) it invalidates virtual paths that don't qualify for partial words,
