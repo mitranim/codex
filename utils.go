@@ -89,40 +89,51 @@ func permutate(length int) []int {
 	return rand.Perm(length)
 }
 
-func randFirsts(pairs PairSet) (results []string) {
-	buffer := make([]string, 0, len(pairs))
-outer:
-	for pair := range pairs {
-		// If existing value, skip.
-		for _, value := range buffer {
-			if pair[0] == value {
-				continue outer
-			}
-		}
-		// Otherwise add new value.
-		buffer = append(buffer, pair[0])
+// Shuffles a slice of strings in-place, using the Fisher–Yates method.
+func shuffle(values []string) {
+	for i := range values {
+		j := rand.Intn(i + 1)
+		values[i], values[j] = values[j], values[i]
 	}
-	results = make([]string, 0, len(buffer))
-	for _, index := range permutate(len(buffer)) {
-		results = append(results, buffer[index])
+}
+
+// Returns the set of first values from the given pairs as a slice.
+func firstValues(pairs PairSet) (results []string) {
+	values := Set{}
+	for pair := range pairs {
+		values.Add(pair[0])
+	}
+	results = make([]string, 0, len(values))
+	for value := range values {
+		results = append(results, value)
 	}
 	return
 }
 
-func randSeconds(pairs PairSet, first string) (results []string) {
-	buffer := make([]string, 0, len(pairs))
+// Returns the set of second values from the given pairs that begin with the
+// given first value as a slice.
+func secondMatching(pairs PairSet, first string) (results []string) {
+	results = []string{}
 	for pair := range pairs {
-		// If doesn't match the given first value, skip.
 		if pair[0] != first {
 			continue
 		}
-		// Otherwise add new value.
-		buffer = append(buffer, pair[1])
+		results = append(results, pair[1])
 	}
-	results = make([]string, 0, len(buffer))
-	for _, index := range permutate(len(buffer)) {
-		results = append(results, buffer[index])
-	}
+	return
+}
+
+// Version of firstValues() that shuffles the results.
+func randFirsts(pairs PairSet) (results []string) {
+	results = firstValues(pairs)
+	shuffle(results)
+	return
+}
+
+// Version of secondMatching() that shuffles the results.
+func randSeconds(pairs PairSet, first string) (results []string) {
+	results = secondMatching(pairs, first)
+	shuffle(results)
 	return
 }
 
@@ -144,7 +155,9 @@ func aid() {
 
 /********************************** PairSet **********************************/
 
-// PairSet behaves like a set of pairs of strings.
+// PairSet behaves like a set of pairs of strings. Performance note: tried a
+// slice version, and it significantly decreased the package's benchmark
+// performance. Sticking with a map for now.
 type PairSet map[[2]string]struct{}
 
 // Creates a new set from the given keys. Usage:

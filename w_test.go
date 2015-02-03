@@ -372,7 +372,7 @@ func Test_State_WordsN_Random_Distribution(t *testing.T) {
 	}
 
 	if count > maxTightGroups {
-		t.Fatalf("!! for %v sorted words, %v samples were tightly grouped", len(words), count)
+		t.Fatalf("!! for %v sorted words, %v out of %v samples were tightly grouped", len(words), count, len(words)/defCount+1)
 	}
 }
 

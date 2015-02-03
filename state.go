@@ -113,7 +113,8 @@ func (this *State) walk(iterator func(...string), sounds ...string) {
 		// The values of the first-level nodes are the first values of the pair set
 		// associated with the traits.
 		for _, first := range randFirsts(this.Traits.PairSet) {
-			// Check for blocked paths.
+			// Check for blocked paths. This also makes sure we don't repeatedly walk
+			// the path starting with the same sound during the same loop.
 			if this.tree.blocked.Has(first) {
 				continue
 			}
@@ -136,7 +137,7 @@ func (this *State) walk(iterator func(...string), sounds ...string) {
 		// appended to the preceding sounds, form foundation paths for child
 		// subtrees. For each of those paths, a child subtree may exist if the path
 		// is a valid partial word.
-		for _, second := range randSeconds(this.Traits.PairSet, sounds[len(sounds)-1]) {
+		for _, second := range randSeconds(this.Traits.PairSet, node.value) {
 			// Check for blocked paths.
 			if node.blocked.Has(second) {
 				continue
