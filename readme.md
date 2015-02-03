@@ -165,7 +165,8 @@ object is used internally by the static `Words()` function.
 
 The fields `Traits.KnownSounds` and `Traits.KnownVowels` let you specify custom
 sets of sounds and vowels to recognise in words. This lets you make the package
-compatible with any character set, including non-Latin. See `Traits.Examine()`.
+compatible with any character set, including non-Latin alphabets. See
+`Traits.Examine()`.
 
 #### `NewTraits([]string) (*Traits, error)`
 
@@ -194,8 +195,9 @@ fmt.Println(words)
 #### `Traits.Examine([]string) error`
 
 Analyses the given group of sample words and merges their traits into the given
-traits object. This lets you create a traits object with custom
-`Traits.KnownSounds` and `Traits.KnownVowels` before analysing the source words.
+traits object. This is useful when you want to create a traits object with
+custom `Traits.KnownSounds` and `Traits.KnownVowels` before analysing the source
+words.
 
 ```golang
 traits := &Traits{KnownSounds: Set.New(nil, "ε", "λ", "η", "ν", "ι", "κ", "ά")}
@@ -371,10 +373,6 @@ samples used in the benchmarks, the execution time has grown from 100-200 µs to
 ### Algorithms
 
 Perhaps Traits.validPart() should also forbid repeated triples.
-
-### Dependencies
-
-Consider dropping `strings`.
 
 ### Readme
 

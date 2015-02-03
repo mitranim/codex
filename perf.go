@@ -3,10 +3,6 @@ package codex
 // Utilities optimised with benchmarks. Keeping this in a separate file to keep
 // track of what has and hasn't been optimised.
 
-import (
-	"strings"
-)
-
 // Returns the biggest number of consequtive vowels that occurs in the given
 // sound sequence.
 func maxConsequtiveVowels(sounds []string, vowels Set) (max int) {
@@ -112,7 +108,7 @@ func (this Set) GoString() string {
 	for key := range this {
 		keys = append(keys, `"`+key+`"`)
 	}
-	return "{" + strings.Join(keys, ", ") + "}"
+	return "{" + join(keys, ", ") + "}"
 }
 
 // Prints itself nicely in println().

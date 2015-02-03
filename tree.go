@@ -136,7 +136,7 @@ func (this tree) GoString() string {
     }
   }
 
-  return "{" + strings.Join(elems, ", ") + "}"
+  return "{" + join(elems, ", ") + "}"
 }
 
 // Prints itself nicely in println().

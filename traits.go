@@ -4,10 +4,6 @@ package codex
 // This module also provides functions to analyse words and extract their
 // traits.
 
-import (
-	"strings"
-)
-
 /*********************************** Type ************************************/
 
 // Traits are rudimental characteristics of a word or group of words. A traits
@@ -69,7 +65,7 @@ type Traits struct {
 // Generates and returns the entire set of words defined by the traits.
 func (this *Traits) Words() (words Set) {
 	iterator := func(sounds ...string) {
-		words.Add(strings.Join(sounds, ""))
+		words.Add(join(sounds, ""))
 	}
 	this.walk(iterator)
 	return

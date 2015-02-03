@@ -3,10 +3,6 @@ package codex
 // Type that encapsulates word traits and maintains an internal state that
 // persists between calls to its word generation methods.
 
-import (
-	"strings"
-)
-
 /*********************************** Type ************************************/
 
 // A State object encapsulates word traits and maintains an internal state that
@@ -50,7 +46,7 @@ func NewState(words []string) (*State, error) {
 // empty result.
 func (this *State) Words() (words Set) {
 	iterator := func(sounds ...string) {
-		words.Add(strings.Join(sounds, ""))
+		words.Add(join(sounds, ""))
 	}
 	this.walk(iterator)
 	return
@@ -64,7 +60,7 @@ func (this *State) Words() (words Set) {
 // subsequent calls to State.Words() and State.WordsN() return an empty result.
 func (this *State) WordsN(num int) (words Set) {
 	iterator := func(sounds ...string) {
-		words.Add(strings.Join(sounds, ""))
+		words.Add(join(sounds, ""))
 	}
 	for i := 0; i < num; i++ {
 		this.trip(iterator)
