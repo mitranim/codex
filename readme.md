@@ -1,7 +1,7 @@
 ## Description
 
 Generator of random synthetic words or names. Takes sample words or names
-provided by the user, analyses them, and produces a set of similar derived
+provided by the user, analyses them, and produces a set of derived similar
 words.
 
 Example usage:
@@ -44,6 +44,7 @@ func main() {
   * [type Traits](#type-traits)
     * [NewTraits()](#newtraitsstring-traits-error)
     * [Traits.Words()](#traitswords-set-error)
+    * [Traits.Examine()](#traitsexaminestring-error)
   * [type State](#type-state)
     * [NewState()](#newstatestring-state-error)
     * [State.Words()](#statewords-set)
@@ -142,6 +143,11 @@ type Traits struct {
   SoundSet Set
   // Set of pairs of sounds that occur in the words.
   PairSet PairSet
+
+  // Replacement sound set to use instead of the default `knownSounds`.
+  KnownSounds Set
+  // Replacement sound set to use instead of the default `knownVowels`.
+  KnownVowels Set
 }
 ```
 
@@ -154,15 +160,19 @@ derived from them. This set may be retrieved with `Traits.Words()`.
 
 A traits object is stateless, and the `Traits.Words()` method is pure, meaning
 that is has no side effects and is guaranteed to produce the same (unordered)
-set on repeated calls. A transient traits object is used internally by the
-static `Words()` function.
+set on repeated calls for the same combination of traits. A transient traits
+object is used internally by the static `Words()` function.
+
+The fields `Traits.KnownSounds` and `Traits.KnownVowels` let you specify custom
+sets of sounds and vowels to recognise in words. This lets you make the package
+compatible with any character set, including non-Latin. See `Traits.Examine()`.
 
 #### `NewTraits([]string) (*Traits, error)`
 
-Analyses the given group of sample words and returns a [`Traits`](#type-traits)
-object with their shared characteristics. After getting hold of a traits object,
-you can apply custom restrictions on its derived words by editing its fields.
-This is also true for a traits object embedded in a `State`.
+Analyses the given group of sample words and returns a `Traits` object with
+their shared characteristics. After getting hold of a traits object, you can
+apply custom restrictions to its derived words by editing its fields. This is
+also true for a traits object embedded in a `State`.
 
 ```golang
 traits, err := NewTraits([]string{"mountain", "waterfall", "grotto"})
@@ -179,6 +189,19 @@ traits, err := NewTraits([]string{"goblin", "smoke"})
 words := traits.Words()
 fmt.Println(words)
 // {"smobli", "smoblin", "smoke", "goke", "gobli", "moke", "mobli", "goblin", "obli", "oblin", "oke", "moblin"}
+```
+
+#### `Traits.Examine([]string) error`
+
+Analyses the given group of sample words and merges their traits into the given
+traits object. This lets you create a traits object with custom
+`Traits.KnownSounds` and `Traits.KnownVowels` before analysing the source words.
+
+```golang
+traits := &Traits{KnownSounds: Set.New(nil, "ε", "λ", "η", "ν", "ι", "κ", "ά")}
+err := traits.Examine([]string{"ελ", "νικά"})
+fmt.Println(err)
+// <nil>
 ```
 
 ### `type State`
@@ -199,10 +222,21 @@ has been exhausted.
 
 A state must always be obtained through a `NewState()` call, or given a valid
 `Traits` object if created manually. Its behaviour without traits is undefined.
-It internal `Traits` object may be edited to apply custom restrictions on the
+Its internal `Traits` object may be edited to apply custom restrictions on the
 derived words.
 
 A transient state object is used internally by the static `WordsN()` function.
+
+Example of creating a new state with custom traits:
+
+```golang
+traits := &Traits{
+  KnownSounds: /* <custom sound glyphs> */,
+  KnownVowels: /* <custom vowel glyphs> */,
+}
+err := traits.Examine([]string{/* <sample words> */})
+state := &State{Traits: traits}
+```
 
 #### `NewState([]string) (*State, error)`
 
@@ -218,12 +252,12 @@ state, err := NewState([]string{"lava", "ridge", "rock"})
 Generates and returns the remainder of the set of synthetic words defined by the
 state's traits. Any words previously returned by the state's `State.WordsN()`
 method are withheld. If called immediately after creating the state, the result
-is guaranteed to be equivalent to `Traits.Words()` for the same source data,
-with roughly 2/3d the performance, give or take. It's also equally problematic
-for large datasets.
+is guaranteed to be equivalent to `Words()` or `Traits.Words()` for the same
+source data, with roughly 2/3d the performance, give or take. It's also equally
+problematic for large datasets.
 
 This method exhausts the remainder of the state's word set, and subsequent calls
-to `State.Words()` or `State.WordsN()` will return an empty result.
+to `State.Words()` or `State.WordsN()` return empty results.
 
 ```golang
 state, err := NewState([]string{"goblin", "smoke"})
@@ -237,8 +271,7 @@ Generates and returns a random sample from the set of synthetic words defined by
 the state's traits. Any words returned by this method are guaranteed to never
 repeat in subsequent calls to the state's `State.Words()` and `State.WordsN()`
 methods. If called enough times, this eventually exhausts the entire set of
-words defined by the state's traits, and subsequent calls return an empty
-result.
+words defined by the state's traits, and subsequent calls return empty results.
 
 This method remains very fast even for large source datasets, and is suitable
 for use on web servers and in other applications where responses must be quick.
@@ -319,20 +352,21 @@ set.Has("polaris") // false
 
 Look into ways to clean up the virtual tree traversal code.
 
-Look into splitting `State.WordsN()` and `State.Words()` traversal into
-different algorithms, because the latter is not defined to be random.
+Consider splitting `State.WordsN()` and `State.Words()` traversal into separate
+algorithms, because the latter is not defined to be random.
 
 Consider providing an option to enable reverse pairs for the `WordsN()` static
-function. Enabling it for any other function or method is too hazardous, the
-combinatorial explosion goes beyond any reasonable measure.
+function. Enabling it for `Words()` or `Traits` or `State` objects (where
+`Words()` could be called) is too hazardous, the combinatorial explosion goes
+beyond any reasonable measure.
 
 ### Performance
 
 Performance for `State.WordsN()` has decreased by a factor of two when adding
 vertical randomisation, again by a factor of two when adding horizontal
 randomisation, and by a quarter when `Traits.checkPart()` was fixed. For the
-samples used in benchmarks, it's gotten from 100-200 µs to 400-800 µs, even over
-1 ms when enabling reverse pairs. Must optimise.
+samples used in the benchmarks, the execution time has grown from 100-200 µs to
+400-800 µs, even over 1 ms when enabling reverse pairs. Must optimise.
 
 ### Algorithms
 
@@ -342,8 +376,10 @@ Perhaps Traits.validPart() should also forbid repeated triples.
 
 Consider dropping `strings`.
 
-Consider dropping `regexp`.
-
 ### Readme
 
-Include examples how to modify Traits fields to restrict word characteristics.
+Include examples of:
+  * using custom sets of known sounds and vowels;
+  * modifying Traits fields to restrict word characteristics.
+
+Document what kind of input data is allowed.

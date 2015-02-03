@@ -7,17 +7,12 @@ import (
 	"strings"
 )
 
-// Checks whether the given sound represents a known vowel.
-func isVowel(sound string) bool {
-	return knownVowels.Has(sound)
-}
-
 // Returns the biggest number of consequtive vowels that occurs in the given
 // sound sequence.
-func maxConsequtiveVowels(sounds []string) (max int) {
+func maxConsequtiveVowels(sounds []string, vowels Set) (max int) {
 	var count int
 	for _, sound := range sounds {
-		if !isVowel(sound) {
+		if !vowels.Has(sound) {
 			count = 0
 		} else {
 			count++
@@ -31,10 +26,10 @@ func maxConsequtiveVowels(sounds []string) (max int) {
 
 // Returns the biggest number of consequtive consonants that occurs in the given
 // sound sequence.
-func maxConsequtiveConsonants(sounds []string) (max int) {
+func maxConsequtiveConsonants(sounds []string, vowels Set) (max int) {
 	var count int
 	for _, sound := range sounds {
-		if isVowel(sound) {
+		if vowels.Has(sound) {
 			count = 0
 		} else {
 			count++

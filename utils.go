@@ -4,7 +4,6 @@ package codex
 
 import (
 	"math/rand"
-	"regexp"
 	"time"
 )
 
@@ -37,11 +36,6 @@ func WordsN(words []string, num int) (Set, error) {
 	return state.WordsN(num), nil
 }
 
-/********************************** Globals **********************************/
-
-// Regexp to test validity of source words.
-var matcher = regexp.MustCompile(`^\w+$`)
-
 /********************************* Utilities *********************************/
 
 func init() {
@@ -49,16 +43,16 @@ func init() {
 }
 
 // Takes a word and splits it into a series of known glyphs representing sounds.
-func getSounds(word string) ([]string, error) {
+func getSounds(word string, known Set) ([]string, error) {
 	sounds := make([]string, 0, len(word))
 	// Loop over the word, matching known glyphs. Break if no match is found.
 	for i := 0; i < len(word); i++ {
 		// Check for a known digraph.
-		if i+2 <= len(word) && knownSounds.Has(word[i:i+2]) {
+		if i+2 <= len(word) && known.Has(word[i:i+2]) {
 			sounds = append(sounds, word[i:i+2])
 			i++
 			// Check for a known monograph.
-		} else if knownSounds.Has(word[i : i+1]) {
+		} else if known.Has(word[i : i+1]) {
 			sounds = append(sounds, word[i:i+1])
 			// Otherwise return an error.
 		} else {
@@ -85,14 +79,9 @@ func addReversePairs(pairs PairSet) {
 	}
 }
 
-// Checks if the given word satisfies the following conditions:
-//   1) only lowercase letters of the English alphabet;
-//   2) no shorter than 2 letters and no longer than 64 letters.
-func validInput(word string) bool {
-	if len(word) < 2 || len(word) > 64 || !matcher.Match([]byte(word)) {
-		return false
-	}
-	return true
+// Checks if the given word is too short or too long.
+func validLength(word string) bool {
+	return len(word) > 1 && len(word) < 65
 }
 
 // Republished rand.Perm.
@@ -135,11 +124,6 @@ func randSeconds(pairs PairSet, first string) (results []string) {
 		results = append(results, buffer[index])
 	}
 	return
-}
-
-// Returns the "invalid" error for the given word.
-func errInvalid(word string) error {
-	return errType("the word `" + word + "` is either too long, too short, or contains symbols other than lowercase Latin letters")
 }
 
 // Panic message used when breaking out from recursive iterations early.

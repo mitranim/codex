@@ -79,7 +79,7 @@ func Test_NewTraits(t *testing.T) {
 	// SoundSet
 	sounds := Set{}
 	for _, word := range testLimitedWords {
-		sequence, err := getSounds(word)
+		sequence, err := getSounds(word, traits.knownSounds())
 		tmust(t, err)
 		for _, sound := range sequence {
 			sounds.Add(sound)
@@ -92,7 +92,7 @@ func Test_NewTraits(t *testing.T) {
 	// PairSet
 	pairs := PairSet{}
 	for _, word := range testLimitedWords {
-		sequence, err := getSounds(word)
+		sequence, err := getSounds(word, traits.knownSounds())
 		tmust(t, err)
 		for pair := range getPairs(sequence) {
 			pairs.Add(pair)
@@ -250,12 +250,84 @@ func Test_Invalid_Input(t *testing.T) {
 	for _, invalid := range invalids {
 		traits, err := NewTraits([]string{invalid})
 		if traits != nil || err == nil {
-			t.Fatalf("!! expected nil traits and non-nil error")
+			t.Fatalf("!! expected nil traits and non-nil error, got %v and %v", traits, err)
 		}
 		state, err := NewState([]string{invalid})
 		if state != nil || err == nil {
-			t.Fatalf("!! expected nil state and non-nil error")
+			t.Fatalf("!! expected nil state and non-nil error, got %v and %v", state, err)
 		}
+	}
+}
+
+// Verifies that Traits.Examine() and NewTraits() are equivalent.
+func Test_Traits_Examine(t *testing.T) {
+	// t.SkipNow()
+
+	Test_NewTraits(t)
+
+	traits := new(Traits)
+	tmust(t, traits.Examine(defWords))
+
+	other, _ := NewTraits(defWords)
+
+	if !reflect.DeepEqual(traits, other) {
+		t.Fatal("!! expected new(Traits) + Traits.Examine() to be equivalent to NewTraits()")
+	}
+
+	if !reflect.DeepEqual(traits.Words(), other.Words()) {
+		t.Fatal("!! expected resulting word sets to be equivalent")
+	}
+}
+
+// Verifies that a Traits object uses internal known sounds, if available.
+func Test_Traits_KnownSounds(t *testing.T) {
+	// t.SkipNow()
+
+	Test_Traits_Examine(t)
+
+	traits := new(Traits)
+
+	traits.KnownSounds = Set.New(nil,
+		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+	)
+
+	if reflect.DeepEqual(traits.knownSounds(), knownSounds) {
+		t.Fatal("!! expected Traits.knownSounds() to return the internal sound set")
+	}
+
+	if traits.Examine(defWords) == nil {
+		t.Fatal("!! expected Traits.Examine() to fail when used with a limited sound set")
+	}
+}
+
+// Verifies that a Traits object uses internal known vowels, if available.
+func Test_Traits_KnownVowels(t *testing.T) {
+	// t.SkipNow()
+
+	Test_NewTraits(t)
+	Test_Traits_Examine(t)
+
+	traits := new(Traits)
+
+	traits.KnownVowels = Set.New(nil,
+		"a", "e", "i",
+	)
+
+	if reflect.DeepEqual(traits.knownVowels(), knownVowels) {
+		t.Fatal("!! expected Traits.knownVowels() to return the internal vowel set")
+	}
+
+	if traits.Examine(defWords) != nil {
+		t.Fatal("!! expected Traits.Examine() to complete successfully when used with a limited vowel set")
+	}
+
+	other, _ := NewTraits(defWords)
+	if reflect.DeepEqual(traits, other) {
+		t.Fatalf("!! expected Traits.Examine() with custom vowels to produce different traits")
+	}
+
+	if reflect.DeepEqual(traits.Words(), other.Words()) {
+		t.Fatal("!! expected resulting word sets to be different")
 	}
 }
 
@@ -341,7 +413,7 @@ func test_WordsN(t *testing.T, source []string) {
 func test_Words_Match_Traits(t *testing.T, traits *Traits, words Set) {
 	for word := range words {
 		// MinNSounds
-		sounds, err := getSounds(word)
+		sounds, err := getSounds(word, traits.knownSounds())
 		tmust(t, err)
 		if len(sounds) < traits.MinNSounds {
 			t.Fatalf("!! \"%v\" MinNSounds mismatch: expected >=%v, got %v", word, traits.MinNSounds, len(sounds))
@@ -353,22 +425,22 @@ func test_Words_Match_Traits(t *testing.T, traits *Traits, words Set) {
 		}
 
 		// MinNVowels
-		if n := countIntersections(sounds, knownVowels); n < traits.MinNVowels {
+		if n := traits.countVowels(sounds); n < traits.MinNVowels {
 			t.Fatalf("!! \"%v\" MinNVowels mismatch: expected >=%v, got %v", word, traits.MinNVowels, n)
 		}
 
 		// MaxNVowels
-		if n := countIntersections(sounds, knownVowels); n > traits.MaxNVowels {
+		if n := traits.countVowels(sounds); n > traits.MaxNVowels {
 			t.Fatalf("!! \"%v\" MaxNVowels mismatch: expected <=%v, got %v", word, traits.MaxNVowels, n)
 		}
 
 		// MaxConseqVow
-		if n := maxConsequtiveVowels(sounds); n > traits.MaxConseqVow {
+		if n := traits.maxConsequtiveVowels(sounds); n > traits.MaxConseqVow {
 			t.Fatalf("!! \"%v\" MaxConseqVow mismatch: expected <=%v, got %v", word, traits.MaxConseqVow, n)
 		}
 
 		// MaxConseqCons
-		if n := maxConsequtiveConsonants(sounds); n > traits.MaxConseqCons {
+		if n := traits.maxConsequtiveConsonants(sounds); n > traits.MaxConseqCons {
 			t.Fatalf("!! \"%v\" MaxConseqCons mismatch: expected <=%v, got %v", word, traits.MaxConseqCons, n)
 		}
 

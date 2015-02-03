@@ -28,6 +28,11 @@ type Traits struct {
 	SoundSet Set
 	// Set of pairs of sounds that occur in the words.
 	PairSet PairSet
+
+	// Replacement sound set to use instead of the default `knownSounds`.
+	KnownSounds Set
+	// Replacement sound set to use instead of the default `knownVowels`.
+	KnownVowels Set
 }
 
 /**
@@ -70,7 +75,124 @@ func (this *Traits) Words() (words Set) {
 	return
 }
 
+// Examines a slice of words and merges their traits into self.
+func (this *Traits) Examine(words []string) error {
+	if this == nil {
+		return errType("can't examine with nil pointer")
+	}
+
+	// Examine each word and merge traits.
+	for _, word := range words {
+		if err := this.examineWord(word); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 /*--------------------------------- Private ---------------------------------*/
+
+// Takes a word, extracts its characteristics, and merges them into self. If the
+// word doesn't satisfy our limitations, returns an error.
+func (this *Traits) examineWord(word string) error {
+	if this == nil {
+		return errType("can't examine with nil pointer")
+	}
+
+	// Make sure the length is okay.
+	if !validLength(word) {
+		return errType("the word is too short or too long")
+	}
+
+	// Split into sounds.
+	sounds, err := getSounds(word, this.knownSounds())
+	if err != nil {
+		return err
+	}
+
+	// Mandate that at least two sounds are found.
+	if len(sounds) < 2 {
+		return errType("less than two sounds found")
+	}
+
+	// Merge min and max number of consequtive sounds.
+	n := len(sounds)
+	if this.MinNSounds == 0 || n < this.MinNSounds {
+		this.MinNSounds = n
+	}
+	if n > this.MaxNSounds {
+		this.MaxNSounds = n
+	}
+
+	// Merge min and max total number of vowels.
+	n = this.countVowels(sounds)
+	if this.MinNVowels == 0 || n < this.MinNVowels {
+		this.MinNVowels = n
+	}
+	if n > this.MaxNVowels {
+		this.MaxNVowels = n
+	}
+
+	// Merge max number of consequtive vowels.
+	n = this.maxConsequtiveVowels(sounds)
+	if n > this.MaxConseqVow {
+		this.MaxConseqVow = n
+	}
+
+	// Merge max number of consequtive consonants.
+	n = this.maxConsequtiveConsonants(sounds)
+	if n > this.MaxConseqCons {
+		this.MaxConseqCons = n
+	}
+
+	// Merge set of used sounds.
+	if this.SoundSet == nil {
+		this.SoundSet = Set.New(nil, sounds...)
+	} else {
+		for sound := range Set.New(nil, sounds...) {
+			this.SoundSet.Add(sound)
+		}
+	}
+
+	// Find set of pairs of sounds.
+	if this.PairSet == nil {
+		this.PairSet = getPairs(sounds)
+	} else {
+		for pair := range getPairs(sounds) {
+			this.PairSet.Add(pair)
+		}
+	}
+
+	/*
+		// Disabled for now; this causes a combinatorial explosion so bad that test
+		// duration goes from seconds to minutes, if not hours. We should add an
+		// option to enable this for the `WordsN()` static function.
+
+		// Add reverse pairs.
+		addReversePairs(this.PairSet)
+	*/
+
+	return nil
+}
+
+// Returns either the set of known sounds associated with the traits, or the
+// default known sounds.
+func (this *Traits) knownSounds() Set {
+	if len(this.KnownSounds) > 0 {
+		return this.KnownSounds
+	}
+	return knownSounds
+}
+
+// Returns either the set of known vowels associated with the traits, or the
+// default known vowels.
+func (this *Traits) knownVowels() Set {
+	if len(this.KnownVowels) > 0 {
+		return this.KnownVowels
+	}
+	return knownVowels
+}
 
 // Checks whether the given combination of sounds satisfies the conditions for
 // a partial word. This is defined as follows:
@@ -81,9 +203,9 @@ func (this *Traits) Words() (words Set) {
 //      defined in Traits.validPairs.
 func (this *Traits) validPart(sounds ...string) bool {
 	// Check numeric criteria.
-	if countIntersections(sounds, knownVowels) > this.MaxNVowels ||
-		maxConsequtiveVowels(sounds) > this.MaxConseqVow ||
-		maxConsequtiveConsonants(sounds) > this.MaxConseqCons {
+	if this.countVowels(sounds) > this.MaxNVowels ||
+		this.maxConsequtiveVowels(sounds) > this.MaxConseqVow ||
+		this.maxConsequtiveConsonants(sounds) > this.MaxConseqCons {
 		return false
 	}
 
@@ -120,7 +242,7 @@ func (this *Traits) validComplete(sounds ...string) bool {
 // undefined.
 func (this *Traits) checkPart(sounds ...string) bool {
 	// Check vowel count.
-	nVow := countIntersections(sounds, knownVowels)
+	nVow := this.countVowels(sounds)
 	if nVow < this.MinNVowels || nVow > this.MaxNVowels {
 		return false
 	}
@@ -179,6 +301,23 @@ func (this *Traits) validPairs(sounds []string) bool {
 	}
 
 	return true
+}
+
+// Returns the biggest number of consequtive vowels that occurs in the given
+// sound sequence.
+func (this *Traits) maxConsequtiveVowels(sounds []string) int {
+	return maxConsequtiveVowels(sounds, this.knownVowels())
+}
+
+// Returns the biggest number of consequtive consonants that occurs in the given
+// sound sequence.
+func (this *Traits) maxConsequtiveConsonants(sounds []string) int {
+	return maxConsequtiveConsonants(sounds, this.knownVowels())
+}
+
+// Counts how many vowels occur in the given sound sequence.
+func (this *Traits) countVowels(sounds []string) int {
+	return countIntersections(sounds, this.knownVowels())
 }
 
 // Traverses the virtual tree of valid partial words associated with the traits
@@ -242,117 +381,11 @@ func (this *Traits) walk(iterator func(...string), sounds ...string) {
 
 /*--------------------------------- Public ----------------------------------*/
 
-// Public version of examineMany().
-func NewTraits(words []string) (traits *Traits, err error) {
-	return examineMany(words)
-}
-
-/*--------------------------------- Private ---------------------------------*/
-
-// Takes a word and returns a set of its characteristics, or an error if the
-// word isn't valid, as per the validInput() function.
-func examine(word string) (traits *Traits, err error) {
-	// Make sure the word is valid.
-	if !validInput(word) {
-		return nil, errInvalid(word)
+// Shortcut to creating a traits object and calling its Traits.Examine().
+func NewTraits(words []string) (*Traits, error) {
+	traits := new(Traits)
+	if err := traits.Examine(words); err != nil {
+		return nil, err
 	}
-
-	// Split into sounds.
-	sounds, err := getSounds(word)
-	if err != nil {
-		return
-	}
-
-	// Mandate that at least two sounds are found.
-	if len(sounds) < 2 {
-		return nil, errType("less than two sounds found")
-	}
-
-	traits = new(Traits)
-
-	// Add min and max number of consequtive sounds.
-	traits.MinNSounds = len(sounds)
-	traits.MaxNSounds = len(sounds)
-
-	// Add max number of consequtive vowels.
-	traits.MaxConseqVow = maxConsequtiveVowels(sounds)
-
-	// Add max number of consequtive consonants.
-	traits.MaxConseqCons = maxConsequtiveConsonants(sounds)
-
-	// Add set of used sounds.
-	traits.SoundSet = Set.New(nil, sounds...)
-
-	// Find number of vowels vowels.
-	nVow := countIntersections(sounds, knownVowels)
-
-	// Add min and max total number of vowels.
-	traits.MinNVowels = nVow
-	traits.MaxNVowels = nVow
-
-	// Find set of pairs of sounds.
-	traits.PairSet = getPairs(sounds)
-
-	/*
-		// Disabled for now; this causes a combinatorial explosion so bad that test
-		// duration goes from seconds to minutes, if not hours. We should add an
-		// option to enable this for the `WordsN()` static function.
-
-		// Add reverse pairs.
-		addReversePairs(traits.PairSet)
-	*/
-
-	return
-}
-
-// Examines a slice of words and merges their traits, returning a Traits object
-// that encompasses them all.
-func examineMany(words []string) (traits *Traits, err error) {
-	traits = &Traits{SoundSet: Set{}, PairSet: PairSet{}}
-
-	// Examine each word and merge traits.
-	for _, word := range words {
-		tr, err := examine(word)
-		if err != nil {
-			return nil, err
-		}
-
-		// Merge MinNSounds and MaxNSounds.
-		if n := tr.MinNSounds; traits.MinNSounds == 0 || n > 0 && n < traits.MinNSounds {
-			traits.MinNSounds = n
-		}
-		if n := tr.MaxNSounds; n > traits.MaxNSounds {
-			traits.MaxNSounds = n
-		}
-
-		// Merge MinNVowels and MaxNVowels.
-		if n := tr.MinNVowels; traits.MinNVowels == 0 || n > 0 && n < traits.MinNVowels {
-			traits.MinNVowels = n
-		}
-		if n := tr.MaxNVowels; n > traits.MaxNVowels {
-			traits.MaxNVowels = n
-		}
-
-		// Merge MaxConseqVow.
-		if tr.MaxConseqVow > traits.MaxConseqVow {
-			traits.MaxConseqVow = tr.MaxConseqVow
-		}
-
-		// Merge MaxConseqCons.
-		if tr.MaxConseqCons > traits.MaxConseqCons {
-			traits.MaxConseqCons = tr.MaxConseqCons
-		}
-
-		// Merge SoundSet.
-		for sound := range tr.SoundSet {
-			traits.SoundSet.Add(sound)
-		}
-
-		// Merge PairSet.
-		for pair := range tr.PairSet {
-			traits.PairSet.Add(pair)
-		}
-	}
-
-	return
+	return traits, nil
 }
