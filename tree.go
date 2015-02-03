@@ -19,13 +19,11 @@ type tree struct {
 	// performance in State tree traversal methods.
 	nodes map[string]*tree
 
-	// Values of children that may not be visited from this node. This only
-	// applies to tree traversal; statically, a node is allowed to have children
-	// with these values.
-	blocked Set
+	// True if this node's path forms a valid partial word.
+	part tern
 
-	// Signals that an iterator function has been called on this node or its path.
-	used bool
+	// True if this node's path forms a valid complete word.
+	complete tern
 }
 
 /**
@@ -87,22 +85,6 @@ func (this tree) walk(iterator func(...string), trail ...string) {
 	}
 }
 
-// Version of tree.walk that travels the tree in a random order.
-func (this tree) walkRandom(iterator func(...string)) {
-	if iterator == nil {
-		return
-	}
-	// Walk the tree and defer each call, building a slice of functions.
-	buffer := []func(){}
-	this.walk(func(sounds ...string) {
-		buffer = append(buffer, func() { iterator(sounds...) })
-	})
-	// Call them in random order.
-	for _, index := range permutate(len(buffer)) {
-		buffer[index]()
-	}
-}
-
 // Finds or creates a node under the given path. Each value in the path
 // represents a value of a descendant node. When a node is created, it's given
 // the current value.
@@ -119,28 +101,3 @@ func (this *tree) at(path ...string) (node *tree) {
 	}
 	return
 }
-
-/*
-// Commented out to avoid depending on fmt. If we include fmt at some point,
-// this should be uncommented.
-
-// Prints the tree in a very minimal form.
-func (this tree) GoString() string {
-  elems := make([]string, 0, len(this))
-
-  for sound, node := range this.nodes {
-    if len(node) == 0 {
-      elems = append(elems, sound)
-    } else {
-      elems = append(elems, fmt.Sprintf("%s: %#v", sound, node))
-    }
-  }
-
-  return "{" + join(elems, ", ") + "}"
-}
-
-// Prints itself nicely in println().
-func (this tree) String() string {
-	return this.GoString()
-}
-*/

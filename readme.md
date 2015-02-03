@@ -306,10 +306,9 @@ for word := range Set{} {
 ```
 
 A `Set` is unordered. In fact, Go actively randomises map iteration order, but
-this is not in the official language spec, and is not random enough. If you want
-to iterate over a set of words randomly, make a `State` object and use its
-`State.WordsN()` method, which is guaranteed to return random samples with no
-repeats.
+this is not always random enough. If you want to iterate over a set of words
+randomly, make a `State` object and use its `State.WordsN()` method, which is
+guaranteed to return random samples with no repeats.
 
 #### `Set.New(_, ...string) Set`
 
@@ -352,23 +351,13 @@ set.Has("polaris") // false
 
 ### Investigation
 
-Look into ways to clean up the virtual tree traversal code.
-
-Consider splitting `State.WordsN()` and `State.Words()` traversal into separate
-algorithms, because the latter is not defined to be random.
-
 Consider providing an option to enable reverse pairs for the `WordsN()` static
 function. Enabling it for `Words()` or `Traits` or `State` objects (where
 `Words()` could be called) is too hazardous, the combinatorial explosion goes
 beyond any reasonable measure.
 
-### Performance
-
-Performance for `State.WordsN()` has decreased by a factor of two when adding
-vertical randomisation, again by a factor of two when adding horizontal
-randomisation, and by a quarter when `Traits.checkPart()` was fixed. For the
-samples used in the benchmarks, the execution time has grown from 100-200 µs to
-400-800 µs, even over 1 ms when enabling reverse pairs. Must optimise.
+Investigate if invalidating entirely used up subtrees would improve performance
+of `State.WordsN()`.
 
 ### Algorithms
 

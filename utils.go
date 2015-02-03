@@ -2,11 +2,6 @@ package codex
 
 // Public and private utility functions.
 
-import (
-	"math/rand"
-	"time"
-)
-
 /***************************** Public Functions ******************************/
 
 // Static generator functions exposed by the package.
@@ -37,10 +32,6 @@ func WordsN(words []string, num int) (Set, error) {
 }
 
 /********************************* Utilities *********************************/
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 // Takes a word and splits it into a series of known glyphs representing sounds.
 func getSounds(word string, known Set) ([]string, error) {
@@ -81,20 +72,7 @@ func addReversePairs(pairs PairSet) {
 
 // Checks if the given word is too short or too long.
 func validLength(word string) bool {
-	return len(word) > 1 && len(word) < 65
-}
-
-// Republished rand.Perm.
-func permutate(length int) []int {
-	return rand.Perm(length)
-}
-
-// Shuffles a slice of strings in-place, using the Fisher–Yates method.
-func shuffle(values []string) {
-	for i := range values {
-		j := rand.Intn(i + 1)
-		values[i], values[j] = values[j], values[i]
-	}
+	return len(word) > 1 && len(word) < 33
 }
 
 // Returns the set of first values from the given pairs as a slice.
@@ -120,20 +98,6 @@ func secondMatching(pairs PairSet, first string) (results []string) {
 		}
 		results = append(results, pair[1])
 	}
-	return
-}
-
-// Version of firstValues() that shuffles the results.
-func randFirsts(pairs PairSet) (results []string) {
-	results = firstValues(pairs)
-	shuffle(results)
-	return
-}
-
-// Version of secondMatching() that shuffles the results.
-func randSeconds(pairs PairSet, first string) (results []string) {
-	results = secondMatching(pairs, first)
-	shuffle(results)
 	return
 }
 
@@ -211,24 +175,14 @@ func (this *PairSet) Has(key [2]string) bool {
 	return ok
 }
 
-/*
-// Commented out to avoid depending on fmt. If we include fmt at some point,
-// this should be uncommented.
+/*********************************** tern ************************************/
 
-// Prints itself nicely in fmt(%#v).
-func (this PairSet) GoString() string {
-	keys := make([]string, 0, len(this))
-	for key := range this {
-		keys = append(keys, fmt.Sprintf("{%#v, %#v}", key[0], key[1]))
-	}
-	return "{" + join(keys, ", ") + "}"
-}
+// Represents a ternary boolean. Nil pointer maps to unset.
+type tern *bool
 
-// Prints itself nicely in println().
-func (this PairSet) String() string {
-	return this.GoString()
+func ternary(bool bool) tern {
+	return &bool
 }
-*/
 
 /********************************** errType **********************************/
 
