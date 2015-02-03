@@ -32,12 +32,12 @@ type State struct {
 
 // Takes a sample group of words, analyses their traits, and builds a State.
 func NewState(words []string) (*State, error) {
-	traits, err := examineMany(words)
+	traits, err := NewTraits(words)
 	if err != nil {
 		return nil, err
 	}
-	state := State{Traits: traits}
-	return &state, nil
+	state := &State{Traits: traits}
+	return state, nil
 }
 
 /********************************** Methods **********************************/
