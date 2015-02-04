@@ -163,8 +163,13 @@ func Test_State_Words(t *testing.T) {
 
 	state, _ := NewState(defWords)
 	words, _ := Words(defWords)
+	total := state.Words()
 
-	if !reflect.DeepEqual(words, state.Words()) {
+	if len(words) != len(total) {
+		t.Fatalf("!! word count mismatch between Words() and State.Words(): %v and %v", len(words), len(total))
+	}
+
+	if !reflect.DeepEqual(words, total) {
 		t.Fatal("!! word set mismatch between Words() and State.Words()")
 	}
 }
@@ -200,6 +205,10 @@ func Test_State_WordsN(t *testing.T) {
 			total.Add(word)
 		}
 		sample = state.WordsN(defCount)
+	}
+
+	if len(words) != len(total) {
+		t.Fatalf("!! word count mismatch between Words() and total from State.WordsN(): %v and %v", len(words), len(total))
 	}
 
 	// Ascertain that the total set returned from all calls is equivalent to the
@@ -393,7 +402,7 @@ func test_Words(t *testing.T, source []string) {
 	if len(words) < 100 {
 		t.Fatal("!! unexpectedly small number of words:", len(words))
 	}
-	t.Log("-- total words in sample:", len(words))
+	// t.Log("-- total words in sample:", len(words))
 	// t.Log("-- words in sample:", words)
 }
 

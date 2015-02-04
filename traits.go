@@ -37,9 +37,9 @@ type Traits struct {
  * 1. Word sets.
  *
  * Given a traits object, we can derive an infinite set of sound sequences
- * using its sounds. A subset of it qualifies as valid partial words, defined
- * by the Traits.validPart() criteria. This, in turn, has a limited subset of
- * sequences that qualify as valid complete words, defined by the
+ * using its sounds. A limited subset of it qualifies as valid partial words,
+ * defined by the Traits.validPart() criteria. This, in turn, has a limited
+ * subset of sequences that qualify as valid complete words, defined by the
  * Traits.validComplete() criteria. This latter set is what we mean when
  * talking about the set of words defined by a traits group.
  *
@@ -50,8 +50,8 @@ type Traits struct {
  * consists of nodes whose values represent sounds. Each node's path, starting
  * at the root, is unique, and represents a sequence of sounds, which may
  * qualify as a partial or complete word. The size of the tree is limited by
- * the criteria defined in Traits.validComplete(), which put a cap on the
- * growth of each branch.
+ * the criteria defined in Traits.validPart(), which puts a cap on the growth
+ * of each branch.
  *
  * The tree doesn't have to exist in memory in order for us to traverse it.
  * For the sake of performance, we avoid building the entire tree, and instead
@@ -67,7 +67,7 @@ func (this *Traits) Words() (words Set) {
 	iterator := func(sounds ...string) {
 		words.Add(join(sounds, ""))
 	}
-	this.walk(iterator)
+	this.walkComplete(iterator)
 	return
 }
 
@@ -316,61 +316,64 @@ func (this *Traits) countVowels(sounds []string) int {
 	return countIntersections(sounds, this.knownVowels())
 }
 
-// Traverses the virtual tree of valid partial words associated with the traits
-// in depth-first pre-order, calling the given iterator function on each path
-// (from the root) that forms a complete word.
-func (this *Traits) walk(iterator func(...string), sounds ...string) {
+// Walks the infinite virtual tree defined by these traits in depth-first pre-
+// order. Will loop infinitely if the iterator function doesn't limit the growth
+// of each branch.
+func (this *Traits) walk(iterator func(...string) bool, sounds ...string) {
 	if iterator == nil {
 		return
 	}
 
-	// If no sounds were passed, start from the root.
+	// If no sound were passed, start from the root.
 	if len(sounds) == 0 {
-		firsts := Set{}
-		// The values of the first-level nodes are the first values of the pair set
-		// associated with the traits.
-		for pair := range this.PairSet {
-			first := pair[0]
-			// Check for repeats. The same first sound may occur in several pairs.
-			if firsts.Has(first) {
-				continue
-			}
-			firsts.Add(first)
-			// Continue recursively.
+		for _, first := range firstValues(this.PairSet) {
 			this.walk(iterator, first)
 		}
-		// If sounds were passed, continue from that path onward.
+		// Otherwise continue from the given path.
 	} else {
 		// [ ... sounds ... ( last sound ] <- pair -> next sound )
 		//
 		// We investigate pairs that begin with the last sound of the given
 		// preceding sounds. Their second sounds form a set that, when individually
 		// appended to the preceding sounds, form foundation paths for child
-		// subtrees. For each of those paths, a child subtree may exist if the path
-		// is a valid partial word.
-		last := sounds[len(sounds)-1]
-		for pair := range this.PairSet {
-			if pair[0] != last {
+		// subtrees.
+		for _, second := range secondMatching(this.PairSet, sounds[len(sounds)-1]) {
+			// Appending to sounds mutates their underlying array unless their cap was
+			// <= 2 or so. If the iterator was expected to store sound slices, we
+			// would allocate a new array for each path to avoid unexpected mutations.
+			// Right now, we can get away with passing the slices as-is, because this
+			// method is not exposed publicly and our own iterators don't store
+			// slices.
+			path := append(sounds, second)
+			if !iterator(path...) {
 				continue
 			}
-
-			// Form the continued path and ensure that it's a valid partial word.
-			path := make([]string, len(sounds), len(sounds)+1)
-			copy(path, sounds)
-			path = append(path, pair[1])
-			if !this.validPart(path...) {
-				continue
-			}
-
-			// If the path is actually a valid complete word, call the iterator.
-			if this.checkPart(path...) {
-				iterator(path...)
-			}
-
 			// Continue deeper.
 			this.walk(iterator, path...)
 		}
 	}
+}
+
+// Walks the limited subtree of these traits' virtual tree, where paths qualify
+// as valid partial words.
+func (this *Traits) walkParts(iterator func(...string)) {
+	this.walk(func(values ...string) bool {
+		if !this.validPart(values...) {
+			return false
+		}
+		iterator(values...)
+		return true
+	})
+}
+
+// Walks the limited subtree of these traits' virtual tree, where paths qualify
+// as valid complete words.
+func (this *Traits) walkComplete(iterator func(...string)) {
+	this.walkParts(func(values ...string) {
+		if this.checkPart(values...) {
+			iterator(values...)
+		}
+	})
 }
 
 /********************************** Statics **********************************/

@@ -38,6 +38,7 @@ func WordsN(words []string, num int) (Set, error) {
 
 /********************************* Utilities *********************************/
 
+// Seed the random generator.
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -81,20 +82,7 @@ func addReversePairs(pairs PairSet) {
 
 // Checks if the given word is too short or too long.
 func validLength(word string) bool {
-	return len(word) > 1 && len(word) < 65
-}
-
-// Republished rand.Perm.
-func permutate(length int) []int {
-	return rand.Perm(length)
-}
-
-// Shuffles a slice of strings in-place, using the Fisher–Yates method.
-func shuffle(values []string) {
-	for i := range values {
-		j := rand.Intn(i + 1)
-		values[i], values[j] = values[j], values[i]
-	}
+	return len(word) > 1 && len(word) < 33
 }
 
 // Returns the set of first values from the given pairs as a slice.
@@ -123,20 +111,6 @@ func secondMatching(pairs PairSet, first string) (results []string) {
 	return
 }
 
-// Version of firstValues() that shuffles the results.
-func randFirsts(pairs PairSet) (results []string) {
-	results = firstValues(pairs)
-	shuffle(results)
-	return
-}
-
-// Version of secondMatching() that shuffles the results.
-func randSeconds(pairs PairSet, first string) (results []string) {
-	results = secondMatching(pairs, first)
-	shuffle(results)
-	return
-}
-
 // Copy of Join from the standard package `strings`.
 func join(a []string, sep string) string {
 	if len(a) == 0 {
@@ -157,6 +131,44 @@ func join(a []string, sep string) string {
 		bp += copy(b[bp:], s)
 	}
 	return string(b)
+}
+
+// Republished rand.Perm.
+func permutate(length int) []int {
+	return rand.Perm(length)
+}
+
+// Shuffles a slice of strings in-place, using the Fisher–Yates method.
+func shuffle(values []string) {
+	for i := range values {
+		j := rand.Intn(i + 1)
+		values[i], values[j] = values[j], values[i]
+	}
+}
+
+// Gets the node values from the given map of child nodes.
+func nodeValues(nodes map[string]*tree) (result []string) {
+	if nodes == nil {
+		return
+	}
+	if len(nodes) == 0 {
+		return []string{}
+	}
+	result = make([]string, 0, len(nodes))
+	for key := range nodes {
+		result = append(result, key)
+	}
+	return
+}
+
+// Gets the node values from the given map of child nodes and shuffles it.
+func randNodeValues(nodes map[string]*tree) (result []string) {
+	result = nodeValues(nodes)
+	if len(result) == 0 {
+		return
+	}
+	shuffle(result)
+	return
 }
 
 // Panic message used when breaking out from recursive iterations early.
@@ -210,25 +222,6 @@ func (this *PairSet) Has(key [2]string) bool {
 	_, ok := (*this)[key]
 	return ok
 }
-
-/*
-// Commented out to avoid depending on fmt. If we include fmt at some point,
-// this should be uncommented.
-
-// Prints itself nicely in fmt(%#v).
-func (this PairSet) GoString() string {
-	keys := make([]string, 0, len(this))
-	for key := range this {
-		keys = append(keys, fmt.Sprintf("{%#v, %#v}", key[0], key[1]))
-	}
-	return "{" + join(keys, ", ") + "}"
-}
-
-// Prints itself nicely in println().
-func (this PairSet) String() string {
-	return this.GoString()
-}
-*/
 
 /********************************** errType **********************************/
 
