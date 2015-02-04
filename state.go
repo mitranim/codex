@@ -45,7 +45,7 @@ func NewState(words []string) (*State, error) {
 // completely; subsequent calls to State.Words() and State.WordsN() return an
 // empty result.
 func (this *State) Words() (words Set) {
-	this.walk(func(sounds ...string) {
+	this.walkStraight(func(sounds ...string) {
 		words.Add(join(sounds, ""))
 	})
 	return
@@ -70,49 +70,93 @@ func (this *State) WordsN(num int) (words Set) {
 
 /*--------------------------------- Private ---------------------------------*/
 
-// Walks the virtual tree of the state's traits, caching the visited parts as a
-// real tree structure. The inner tree caches the results of Traits.validPart()
-// and Traits.validComplete() checks, speeding up repeated traversals and
-// letting us skip paths that have already been fed to an iterator function in a
-// preceding traversal.
+// Walks the virtual tree of the state's traits, caching the visited parts in
+// the state's inner tree. This caching lets us skip repeated Traits.validPart()
+// checks, individual visited nodes, and fully visited subtrees. This has no
+// benefit for a one-shot traversal that visits the entire tree at once (see
+// State.Words()), but significantly speeds up traversals that restart from the
+// root after exiting early via panic (see State.trip()), and lets us avoid
+// revisiting nodes.
 //
-// Due to caching, this method is compatible with early exits via panic; see
-// State.trip().
-func (this *State) walk(iterator func(...string)) {
+// This also randomises the order of visiting subtrees from each node.
+func (this *State) walk(iterator func(...string), sounds ...string) {
+	if iterator == nil {
+		return
+	}
 	if this.tree == nil {
 		this.tree = new(tree)
 	}
-	this.Traits.walk(func(sounds ...string) bool {
-		node := this.tree.at(sounds...)
 
-		// Check partial validity. If this path doesn't qualify as a partial word,
-		// abort the branch.
-		if node.part == nil {
-			node.part = ternary(this.Traits.validPart(sounds...))
-		}
-		if !*node.part {
-			return false
-		}
+	// Find or create a matching node for this path. If it doesn't have child
+	// nodes yet, make a shallow map to track valid paths.
+	node := this.tree.at(sounds...)
+	if node.nodes == nil {
+		node.nodes = sprout(this.Traits.PairSet, sounds...)
+	}
 
-		// Check complete validity. If this path qualifies as a complete word, call
-		// the iterator with it. If the value is already set and true, this implies
-		// that an iterator has already been called with this path. In this case, we
-		// don't call it again.
-		if node.complete == nil {
-			node.complete = ternary(this.Traits.checkPart(sounds...))
-			if *node.complete {
-				iterator(sounds...)
-			}
+	// Loop over remaining child nodes and investigate their subtrees.
+	for _, sound := range randNodeValues(node.nodes) {
+		path := append(sounds, sound)
+		// Invalidate the path if it doesn't qualify as a partial word.
+		if !this.Traits.validPart(path...) {
+			delete(node.nodes, sound)
+			continue
 		}
-		return true
-	})
+		// (1)(2) -> pre-order, (2)(1) -> post-order. Post-order is required by
+		// State.walkRandom(); it slows down State.Words() by about 10-15%, which
+		// doesn't warrant its own separate algorithm.
+		// (2) Continue recursively.
+		this.walk(iterator, path...)
+		// (1) If this path hasn't yet been visited, feed it to the iterator.
+		if !node.at(sound).visited {
+			iterator(path...)
+		}
+		// If this code is reached, the subtree is used up, so we forget about it.
+		delete(node.nodes, sound)
+	}
 }
 
-// Uses State.walk() to traverse the tree and interrupts the walking after one
-// successful call to the given iterator function.
+// Walks the state's virtual tree, visiting paths that qualify as valid complete
+// words.
+func (this *State) walkStraight(iterator func(...string)) {
+	iter := func(sounds ...string) {
+		this.tree.at(sounds...).visited = true
+		if this.Traits.checkPart(sounds...) {
+			iterator(sounds...)
+		}
+	}
+	this.walk(iter)
+}
+
+// Walks the state's virtual tree; for each paths given to the wrapper function,
+// we visit its subpaths in random order, marking the corresponding nodes as
+// visited. For the distribution to be random, the tree needs to be traversed in
+// post-order. We only visit paths that qualify as valid complete words and
+// haven't been visited before.
+func (this *State) walkRandom(iterator func(...string)) {
+	iter := func(sounds ...string) {
+		for _, index := range permutate(len(sounds)) {
+			if index < 1 {
+				continue
+			}
+			path := sounds[:index+1]
+			node := this.tree.at(path...)
+			if !node.visited {
+				node.visited = true
+				if this.Traits.checkPart(path...) {
+					iterator(path...)
+				}
+			}
+		}
+	}
+	this.walk(iter)
+}
+
+// Uses State.walkRandom() to traverse the tree and interrupts the walking after
+// one successful call to the given iterator function.
 func (this *State) trip(iterator func(...string)) {
 	defer aid()
-	this.walk(func(sounds ...string) {
+	this.walkRandom(func(sounds ...string) {
 		iterator(sounds...)
 		interrupt()
 	})

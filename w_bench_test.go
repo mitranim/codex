@@ -102,3 +102,18 @@ func Benchmark_State_WordsN(b *testing.B) {
 		}
 	}
 }
+
+// State.WordsN() with a larger source dataset
+func Benchmark_State_WordsN_LargeDataset(b *testing.B) {
+	// b.SkipNow()
+
+	state, _ := NewState(testManyWords)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if len(state.WordsN(defCount)) == 0 {
+			state, _ = NewState(testManyWords)
+			state.WordsN(defCount)
+		}
+	}
+}

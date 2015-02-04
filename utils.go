@@ -2,6 +2,11 @@ package codex
 
 // Public and private utility functions.
 
+import (
+	"math/rand"
+	"time"
+)
+
 /***************************** Public Functions ******************************/
 
 // Static generator functions exposed by the package.
@@ -32,6 +37,11 @@ func WordsN(words []string, num int) (Set, error) {
 }
 
 /********************************* Utilities *********************************/
+
+// Seed the random generator.
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 // Takes a word and splits it into a series of known glyphs representing sounds.
 func getSounds(word string, known Set) ([]string, error) {
@@ -123,6 +133,44 @@ func join(a []string, sep string) string {
 	return string(b)
 }
 
+// Republished rand.Perm.
+func permutate(length int) []int {
+	return rand.Perm(length)
+}
+
+// Shuffles a slice of strings in-place, using the Fisher–Yates method.
+func shuffle(values []string) {
+	for i := range values {
+		j := rand.Intn(i + 1)
+		values[i], values[j] = values[j], values[i]
+	}
+}
+
+// Gets the node values from the given map of child nodes.
+func nodeValues(nodes map[string]*tree) (result []string) {
+	if nodes == nil {
+		return
+	}
+	if len(nodes) == 0 {
+		return []string{}
+	}
+	result = make([]string, 0, len(nodes))
+	for key := range nodes {
+		result = append(result, key)
+	}
+	return
+}
+
+// Gets the node values from the given map of child nodes and shuffles it.
+func randNodeValues(nodes map[string]*tree) (result []string) {
+	result = nodeValues(nodes)
+	if len(result) == 0 {
+		return
+	}
+	shuffle(result)
+	return
+}
+
 // Panic message used when breaking out from recursive iterations early.
 const panicMsg = "early exit through panic"
 
@@ -173,15 +221,6 @@ func (this *PairSet) Del(key [2]string) {
 func (this *PairSet) Has(key [2]string) bool {
 	_, ok := (*this)[key]
 	return ok
-}
-
-/*********************************** tern ************************************/
-
-// Represents a ternary boolean. Nil pointer maps to unset.
-type tern *bool
-
-func ternary(bool bool) tern {
-	return &bool
 }
 
 /********************************** errType **********************************/

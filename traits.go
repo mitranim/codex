@@ -338,9 +338,13 @@ func (this *Traits) walk(iterator func(...string) bool, sounds ...string) {
 		// appended to the preceding sounds, form foundation paths for child
 		// subtrees.
 		for _, second := range secondMatching(this.PairSet, sounds[len(sounds)-1]) {
-			path := make([]string, len(sounds), len(sounds)+1)
-			copy(path, sounds)
-			path = append(path, second)
+			// Appending to sounds mutates their underlying array unless their cap was
+			// <= 2 or so. If the iterator was expected to store sound slices, we
+			// would allocate a new array for each path to avoid unexpected mutations.
+			// Right now, we can get away with passing the slices as-is, because this
+			// method is not exposed publicly and our own iterators don't store
+			// slices.
+			path := append(sounds, second)
 			if !iterator(path...) {
 				continue
 			}

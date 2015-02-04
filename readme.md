@@ -113,7 +113,7 @@ Returns a random sample from the set of synthetic words that may be derived from
 the given words, limited to the given count. The sequence is guaranteed to be
 duplicate-free.
 
-Unlike `Words()`, this remains very fast even for large datasets, and is
+Unlike `Words()`, this remains very fast even for large source datasets, and is
 suitable for use on a web server or another application where responses must be
 quick.
 
@@ -275,8 +275,8 @@ repeat in subsequent calls to the state's `State.Words()` and `State.WordsN()`
 methods. If called enough times, this eventually exhausts the entire set of
 words defined by the state's traits, and subsequent calls return empty results.
 
-This method remains very fast even for large source datasets, and is suitable
-for use on web servers and in other applications where responses must be quick.
+This method remains fast even for large source datasets, and is suitable for use
+on web servers and in other applications where responses must be quick.
 
 ```golang
 state, err := NewState([]string{"goblin", "smoke"})
@@ -356,12 +356,15 @@ function. Enabling it for `Words()` or `Traits` or `State` objects (where
 `Words()` could be called) is too hazardous, the combinatorial explosion goes
 beyond any reasonable measure.
 
-Investigate if invalidating entirely used up subtrees would improve performance
-of `State.WordsN()`.
-
 ### Algorithms
 
 Perhaps Traits.validPart() should also forbid repeated triples.
+
+### Tests
+
+Random distribution test for `State.WordsN()` should verify that preceding calls
+may return words that contain (starting at index 0) words returned from later
+calls.
 
 ### Readme
 

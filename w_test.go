@@ -402,7 +402,7 @@ func test_Words(t *testing.T, source []string) {
 	if len(words) < 100 {
 		t.Fatal("!! unexpectedly small number of words:", len(words))
 	}
-	t.Log("-- total words in sample:", len(words))
+	// t.Log("-- total words in sample:", len(words))
 	// t.Log("-- words in sample:", words)
 }
 
