@@ -251,7 +251,9 @@ func (this *Traits) checkPart(sounds ...string) bool {
 
 // Verifies the validity of the sequence of sound pairs comprising the given
 // word. Defined as follows:
-//   1) the sequence must consist of sound pairs in the given traits;
+//   1) the sequence must consist of sound pairs in the given traits; this is
+//      implicitly guaranteed by the current tree traversal algorithms, so we
+//      skip this check to save performance;
 //   2) no sound pair immediately follows itself (e.g. "tata" in "ratatater");
 //   3) no sound pair occurs more than twice.
 // This has been somewhat optimised. Might stand for further improvement.
@@ -273,11 +275,6 @@ func (this *Traits) validPairs(sounds []string) bool {
 		}
 
 		secondLastPair, lastPair, pair = lastPair, pair, [2]string{prev, current}
-
-		// Check for condition (1).
-		if !this.PairSet.Has(pair) {
-			return false
-		}
 
 		// Check for condition (2). This can only be done starting at index 3.
 		if index >= 3 {

@@ -21,6 +21,15 @@ func Benchmark_NewTraits(b *testing.B) {
 	}
 }
 
+// NewTraits()
+func Benchmark_NewTraits_LargeDataset(b *testing.B) {
+	// b.SkipNow()
+
+	for i := 0; i < b.N; i++ {
+		NewTraits(testManyWords)
+	}
+}
+
 // NewState()
 func Benchmark_NewState(b *testing.B) {
 	// b.SkipNow()
