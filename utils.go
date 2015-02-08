@@ -1,40 +1,11 @@
 package codex
 
-// Public and private utility functions.
+// Utility functions and types.
 
 import (
 	"math/rand"
 	"time"
 )
-
-/***************************** Public Functions ******************************/
-
-// Static generator functions exposed by the package.
-
-// Takes a sample group of words, analyses their traits, and builds a set of all
-// synthetic words that may derived from those traits. This should only be used
-// for very small samples. More than just a handful of sample words causes a
-// combinatorial explosion, takes a lot of time to calculate, and produces too
-// many results to be useful. The number of results can easily reach hundreds of
-// thousands for just a dozen of sample words.
-func Words(words []string) (Set, error) {
-	traits, err := NewTraits(words)
-	if err != nil {
-		return nil, err
-	}
-	return traits.Words(), nil
-}
-
-// Takes a sample group of words and a count limiter. Analyses the words and
-// builds a random sample of synthetic words that may be derived from those
-// traits, limited to the given count.
-func WordsN(words []string, num int) (Set, error) {
-	state, err := NewState(words)
-	if err != nil {
-		return nil, err
-	}
-	return state.WordsN(num), nil
-}
 
 /********************************* Utilities *********************************/
 
@@ -189,9 +160,12 @@ func aid() {
 
 /********************************** PairSet **********************************/
 
-// PairSet behaves like a set of pairs of strings. Performance note: tried a
-// slice version, and it significantly decreased the package's benchmark
-// performance. Sticking with a map for now.
+/**
+ * Performance note: tried a slice version, and it significantly decreased the
+ * package's benchmark performance. Sticking with a map for now.
+ */
+
+// PairSet behaves like a set of pairs of strings.
 type PairSet map[[2]string]struct{}
 
 // Creates a new set from the given keys. Usage:

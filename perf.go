@@ -66,11 +66,17 @@ func countPair(strings []string, prev, current string) (count int) {
 
 /************************************ Set ************************************/
 
-// Set behaves like a set of strings. Tried a map version and a slice version.
-// The slice version was marginally faster for very small datasets and with
-// little lookup. The map version is significantly faster for anything more than
-// a handful of values, or with many lookups. The difference is huge for big
-// datasets, which this package has aplenty.
+/**
+ * Performance note.
+ *
+ * Tried a map version and a slice version. The slice version was marginally
+ * faster for very small datasets and with little lookup. The map version is
+ * significantly faster for anything more than a handful of values, or with
+ * many lookups. The difference is huge for big datasets, which this package
+ * has aplenty.
+ */
+
+// Set behaves like a set of strings.
 type Set map[string]struct{}
 
 // Creates a new set from the given keys. Usage:

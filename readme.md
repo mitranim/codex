@@ -1,12 +1,15 @@
+[![GoDoc](https://godoc.org/github.com/Mitranim/codex?status.svg)](https://godoc.org/github.com/Mitranim/codex)
+
 ## Description
 
-Generator of random synthetic words or names. Takes sample words or names
-provided by the user, analyses them, and produces a set of derived similar
-words.
+Generator of random synthetic words or names. Takes a sample provided by the
+user, analyses it, and produces a set of similar derived words.
 
-Example usage:
+Example program using `codex`:
 
 ```golang
+package main
+
 import (
   "fmt"
   "github.com/Mitranim/codex"
@@ -21,16 +24,17 @@ func main() {
   fmt.Println(sample)
   fmt.Println("total:", len(total))
   fmt.Println(err)
-
-  /*
-    {
-      "inari", "tikarik", "karinat", "ariko", "minatik", "ikasmin",
-      "kasmine", "katiko", "rikasmi", "mikatin", "natie", "natika",
-    }
-    total: 180
-    <nil>
-  */
 }
+
+// Printed results:
+/*
+  {
+    "inari", "tikarik", "karinat", "ariko", "minatik", "ikasmin",
+    "kasmine", "katiko", "rikasmi", "mikatin", "natie", "natika",
+  }
+  total: 180
+  <nil>
+*/
 ```
 
 ## Contents
