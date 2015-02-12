@@ -93,6 +93,12 @@ go test -bench .
 
 ## API Reference
 
+Most public functions exposed by the package take existing words as input. Words
+must consist of known glyphs, as defined by the sound sets in
+[`sounds.go`](sounds.go) or by custom sets passed into a Traits object (see the
+[reference](#type-traits)). If an invalid word is encountered, an error is
+returned.
+
 ### `Words([]string) (Set, error)`
 
 Returns the entire set of synthetic words that may be derived from the given
