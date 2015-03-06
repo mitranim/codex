@@ -42,9 +42,9 @@ package codex
 /********************************* Functions *********************************/
 
 // Takes a sample group of words, analyses their traits, and builds a set of all
-// synthetic words that may derived from those traits. This should only be used
-// for very small samples. More than just a handful of sample words causes a
-// combinatorial explosion, takes a lot of time to calculate, and produces too
+// synthetic words that may be derived from those traits. This should only be
+// used for very small samples. More than just a handful of sample words causes
+// a combinatorial explosion, takes a lot of time to calculate, and produces too
 // many results to be useful. The number of results can easily reach hundreds of
 // thousands for just a dozen of sample words.
 func Words(words []string) (Set, error) {

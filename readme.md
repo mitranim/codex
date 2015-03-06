@@ -379,7 +379,7 @@ calls.
 ### Readme
 
 Include examples of:
-  * using custom sets of known sounds and vowels;
+  * using custom sets of known sounds and vowels, particularly non-Latin;
   * modifying Traits fields to restrict word characteristics.
 
 Document what kind of input data is allowed.
