@@ -29,9 +29,9 @@ var testLimitedWords = []string{
 	"theron", "thorax", "rocket", "proton", "filler", "absurd", "paper",
 }
 
-var defWords = testWords
+var testDefWords = testWords
 
-const defCount = 12
+const testDefCount = 12
 
 /*********************************** Tests ***********************************/
 
@@ -103,153 +103,74 @@ func Test_NewTraits(t *testing.T) {
 	}
 }
 
-// NewState()
-func Test_NewState(t *testing.T) {
+// Traits.Generator()
+func Test_Traits_Generator(t *testing.T) {
 	// t.SkipNow()
 
-	state, err := NewState(defWords)
+	traits, err := NewTraits(testDefWords)
 	tmust(t, err)
+	gen := traits.Generator()
 
-	if state == nil {
-		t.Fatal("!! missing state object")
+	if gen == nil {
+		t.Fatal("!! missing generator function")
+	}
+
+	if gen() == "" {
+		t.Fatal("!! no output received from generator")
 	}
 }
 
-// Words()
-func Test_Words(t *testing.T) {
-	// t.SkipNow()
-	test_Words(t, defWords)
-}
-
-// Words() with a larger source dataset
-func Test_Words_LargeDataset(t *testing.T) {
-	// t.SkipNow()
-	test_Words(t, testManyWords)
-}
-
-// WordsN()
-func Test_WordsN(t *testing.T) {
-	// t.SkipNow()
-	test_WordsN(t, defWords)
-}
-
-// WordsN() with a larger source dataset
-func Test_WordsN_LargeDataset(t *testing.T) {
-	// t.SkipNow()
-	test_WordsN(t, testManyWords)
-}
-
-// Traits.Words()
-func Test_Traits_Words(t *testing.T) {
+// Checks a generator's output. Also verifies that a generator eventually
+// exhausts its word set (will enter an infinite loop otherwise).
+func Test_Generator(t *testing.T) {
 	// t.SkipNow()
 
-	Test_NewTraits(t)
-	Test_Words(t)
+	Test_Traits_Generator(t)
 
-	traits, _ := NewTraits(defWords)
-	words, _ := Words(defWords)
+	traits, _ := NewTraits(testDefWords)
+	gen := traits.Generator()
+	words := Set{}
 
-	if !reflect.DeepEqual(words, traits.Words()) {
-		t.Fatal("!! word set mismatch between Words() and Traits.Words()")
-	}
-}
-
-// State.Words()
-func Test_State_Words(t *testing.T) {
-	// t.SkipNow()
-
-	Test_NewState(t)
-	Test_Words(t)
-
-	state, _ := NewState(defWords)
-	words, _ := Words(defWords)
-	total := state.Words()
-
-	if len(words) != len(total) {
-		t.Fatalf("!! word count mismatch between Words() and State.Words(): %v and %v", len(words), len(total))
-	}
-
-	if !reflect.DeepEqual(words, total) {
-		t.Fatal("!! word set mismatch between Words() and State.Words()")
-	}
-}
-
-// State.WordsN()
-func Test_State_WordsN(t *testing.T) {
-	// t.SkipNow()
-
-	Test_NewState(t)
-	Test_Words(t)
-	Test_State_Words(t)
-
-	state, _ := NewState(defWords)
-	words, _ := Words(defWords)
-
-	// Ascertain that the method returns the expected number of words.
-	sample := state.WordsN(defCount)
-	if sample == nil {
-		t.Fatal("!! missing sample set")
-	}
-	if len(sample) != defCount {
-		t.Fatal("!! word count mismatch")
-	}
-
-	// Ascertain that no results are repeated and that subsequent calls eventually
-	// exhaust the word pool.
-	total := Set{}
-	for len(sample) > 0 {
-		for word := range sample {
-			if total.Has(word) {
-				t.Fatal("!! repeated word", word, "at total length:", len(total))
-			}
-			total.Add(word)
+	// Collect the total output, check each word's validity and uniqueness.
+	for word := gen(); word != ""; word = gen() {
+		sounds, err := getSounds(word, traits.knownSounds())
+		tmust(t, err)
+		if !traits.validComplete(sounds...) {
+			t.Fatal("!! invalid output from generator:", word)
 		}
-		sample = state.WordsN(defCount)
+		if words.Has(word) {
+			t.Fatal("!! repeated output from generator:", word)
+		}
+		words.Add(word)
 	}
 
-	if len(words) != len(total) {
-		t.Fatalf("!! word count mismatch between Words() and total from State.WordsN(): %v and %v", len(words), len(total))
+	// The output for a dozen source words can easily reach tens of thousands of
+	// results. We're being very conservative here.
+	if len(words) < 100 {
+		t.Fatal("!! unexpectedly small number of words:", len(words))
 	}
 
-	// Ascertain that the total set returned from all calls is equivalent to the
-	// set from Words(), which is shown to be equivalent to State.Words() in
-	// another test.
-	if !reflect.DeepEqual(words, total) {
-		t.Fatal("!! word set mismatch between Words() and total from State.WordsN()")
-	}
+	// t.Log("-- total words in sample:", len(words))
+	// t.Log("-- words in sample:", words)
 }
 
-// Verifies that words from Words() match their traits.
-func Test_Words_Match_Traits(t *testing.T) {
+// Verifies that the words returned from a generator match its source traits.
+func Test_Generator_Words_Match_Traits(t *testing.T) {
 	// t.SkipNow()
 
-	Test_NewTraits(t)
-	Test_Words(t)
+	Test_Generator(t)
 
 	traits, _ := NewTraits(testLimitedWords)
-	words, _ := Words(testLimitedWords)
+	words := collectAll(traits)
 
 	test_Words_Match_Traits(t, traits, words)
 }
 
-// Verifies that words from State.Words() match their traits.
-func Test_State_Words_Match_Traits(t *testing.T) {
-	// t.SkipNow()
-
-	Test_NewState(t)
-	Test_State_Words(t)
-
-	state, _ := NewState(testLimitedWords)
-
-	test_Words_Match_Traits(t, state.Traits, state.Words())
-}
-
-// Verifies that NewTraits() and NewState() produce an error with invalid input.
+// Verifies that NewTraits() produces an error with invalid input.
 func Test_Invalid_Input(t *testing.T) {
 	// t.SkipNow()
 
 	Test_NewTraits(t)
-	Test_NewState(t)
 
 	invalids := []string{
 		"", "a", "CAPITALS", "Capitalised", "with space",
@@ -261,10 +182,6 @@ func Test_Invalid_Input(t *testing.T) {
 		if traits != nil || err == nil {
 			t.Fatalf("!! expected nil traits and non-nil error, got %v and %v", traits, err)
 		}
-		state, err := NewState([]string{invalid})
-		if state != nil || err == nil {
-			t.Fatalf("!! expected nil state and non-nil error, got %v and %v", state, err)
-		}
 	}
 }
 
@@ -275,15 +192,15 @@ func Test_Traits_Examine(t *testing.T) {
 	Test_NewTraits(t)
 
 	traits := new(Traits)
-	tmust(t, traits.Examine(defWords))
+	tmust(t, traits.Examine(testDefWords))
 
-	other, _ := NewTraits(defWords)
+	other, _ := NewTraits(testDefWords)
 
 	if !reflect.DeepEqual(traits, other) {
 		t.Fatal("!! expected new(Traits) + Traits.Examine() to be equivalent to NewTraits()")
 	}
 
-	if !reflect.DeepEqual(traits.Words(), other.Words()) {
+	if !reflect.DeepEqual(collectAll(traits), collectAll(other)) {
 		t.Fatal("!! expected resulting word sets to be equivalent")
 	}
 }
@@ -304,7 +221,7 @@ func Test_Traits_KnownSounds(t *testing.T) {
 		t.Fatal("!! expected Traits.knownSounds() to return the internal sound set")
 	}
 
-	if traits.Examine(defWords) == nil {
+	if traits.Examine(testDefWords) == nil {
 		t.Fatal("!! expected Traits.Examine() to fail when used with a limited sound set")
 	}
 }
@@ -326,33 +243,35 @@ func Test_Traits_KnownVowels(t *testing.T) {
 		t.Fatal("!! expected Traits.knownVowels() to return the internal vowel set")
 	}
 
-	if traits.Examine(defWords) != nil {
+	if traits.Examine(testDefWords) != nil {
 		t.Fatal("!! expected Traits.Examine() to complete successfully when used with a limited vowel set")
 	}
 
-	other, _ := NewTraits(defWords)
+	other, _ := NewTraits(testDefWords)
 	if reflect.DeepEqual(traits, other) {
 		t.Fatalf("!! expected Traits.Examine() with custom vowels to produce different traits")
 	}
 
-	if reflect.DeepEqual(traits.Words(), other.Words()) {
+	if reflect.DeepEqual(collectAll(traits), collectAll(other)) {
 		t.Fatal("!! expected resulting word sets to be different")
 	}
 }
 
-// Verifies that words from State.WordsN() are randomly distributed. Rudimental
-// and naive, todo remember some math and use a real probability function.
-func Test_State_WordsN_Random_Distribution(t *testing.T) {
+// Verifies that words from a generator are randomly distributed. Rudimental and
+// naive, todo remember some math and use a real probability function.
+func Test_Generator_Random_Distribution(t *testing.T) {
 	// t.SkipNow()
 
-	Test_NewState(t)
-	Test_Words(t)
-	Test_State_WordsN(t)
+	Test_Generator(t)
 
-	state, _ := NewState(defWords)
+	traits, _ := NewTraits(testDefWords)
 
 	// Make a sorted list of words.
-	unordered, _ := Words(defWords)
+	gen := traits.Generator()
+	unordered := Set{}
+	for word := gen(); word != ""; word = gen() {
+		unordered.Add(word)
+	}
 	words := make([]string, 0, len(unordered))
 	for word := range unordered {
 		words = append(words, word)
@@ -360,7 +279,7 @@ func Test_State_WordsN_Random_Distribution(t *testing.T) {
 	sort.Strings(words)
 
 	// Limit of how many tight groups to permit.
-	maxTightGroups := len(words) / defCount / 10
+	maxTightGroups := len(words) / testDefCount / 10
 	if maxTightGroups == 0 {
 		maxTightGroups = 1
 	}
@@ -368,9 +287,12 @@ func Test_State_WordsN_Random_Distribution(t *testing.T) {
 	// Counter of tight group occurrences.
 	count := 0
 
-	// Loop over State.WordsN() results and count how many times all indices from
+	// Prepare a generator that makes words in chunks.
+	wordsN := generatorN(traits)
+
+	// Loop over generator results and count how many times all indices from
 	// a sample fall within a tight range (let's say 1/5th the length).
-	for sample := state.WordsN(defCount); len(sample) > 0; sample = state.WordsN(defCount) {
+	for sample := wordsN(testDefCount); len(sample) > 0; sample = wordsN(testDefCount) {
 		indices := make([]int, 0, len(sample))
 		for word := range sample {
 			indices = append(indices, findIndex(words, word))
@@ -381,42 +303,11 @@ func Test_State_WordsN_Random_Distribution(t *testing.T) {
 	}
 
 	if count > maxTightGroups {
-		t.Fatalf("!! for %v sorted words, %v out of %v samples were tightly grouped", len(words), count, len(words)/defCount+1)
+		t.Fatalf("!! for %v sorted words, %v out of %v samples were tightly grouped", len(words), count, len(words)/testDefCount+1)
 	}
 }
 
 /********************************** Helpers **********************************/
-
-// Words() helper.
-func test_Words(t *testing.T, source []string) {
-	words, err := Words(source)
-	tmust(t, err)
-	if words == nil {
-		t.Fatal("!! missing words set")
-	}
-	if len(words) == 0 {
-		t.Fatal("!! zero words received")
-	}
-	// The output for a dozen source words can easily reach tens of thousands of
-	// results. We're being very conservative here.
-	if len(words) < 100 {
-		t.Fatal("!! unexpectedly small number of words:", len(words))
-	}
-	// t.Log("-- total words in sample:", len(words))
-	// t.Log("-- words in sample:", words)
-}
-
-// WordsN() helper.
-func test_WordsN(t *testing.T, source []string) {
-	words, err := WordsN(source, defCount)
-	tmust(t, err)
-	if words == nil {
-		t.Fatal("!! missing words set")
-	}
-	if len(words) != defCount {
-		t.Fatalf("!! word count mismatch: expected %v, got %v", defCount, len(words))
-	}
-}
 
 // Words_Match_Traits helper.
 func test_Words_Match_Traits(t *testing.T, traits *Traits, words Set) {
@@ -532,4 +423,28 @@ func maximum(values []int) int {
 		}
 	}
 	return result
+}
+
+// Creates a function that generates words in chunks until its inner generator
+// is exhausted.
+func generatorN(traits *Traits) func(int) Set {
+	gen := traits.Generator()
+
+	return func(num int) Set {
+		words := Set{}
+		for word := gen(); word != "" && len(words) < num; word = gen() {
+			words.Add(word)
+		}
+		return words
+	}
+}
+
+// Collects all words from the given traits.
+func collectAll(traits *Traits) Set {
+	words := Set{}
+	gen := traits.Generator()
+	for word := gen(); word != ""; word = gen() {
+		words.Add(word)
+	}
+	return words
 }

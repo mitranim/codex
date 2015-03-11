@@ -1,85 +1,33 @@
 package codex
 
-// Type that encapsulates word traits and maintains an internal state that
-// persists between calls to its word generation methods.
+// Type that encapsulates word traits and maintains an internal state that is
+// mutated by, and affects, its tree traversal methods.
 
 /*********************************** Type ************************************/
 
-// A State object encapsulates word traits and maintains an internal state that
-// affects its word generator methods. It defines its own methods for traversing
-// the virtual tree defined by the traits. The internal state, represented with
-// a tree type, reflects the visited parts of the virtual tree, keeping track of
-// previously generated words. It allows us to speed up repeated traversals and
-// guarantee no repeated words.
-//
-// A state must always be created with a NewState() call, or given an existing
-// Traits object obtained with NewTraits(). Its behaviour without an associated
-// Traits object is undefined.
-type State struct {
+// A state object encapsulates word traits and maintains an internal state that
+// affects its tree traversal methods. The internal state, represented with a
+// tree type, reflects the visited parts of the traits' virtual tree, keeping
+// track of previously generated words. It allows us to speed up repeated
+// traversals and guarantee no repeated words.
+type state struct {
 	// Word traits.
-	Traits *Traits
+	traits *Traits
 
 	// Tree that reflects the visited parts of the virtual tree defined by the
-	// state's traits. It's built by State.walk() calls.
+	// state's traits. It's built by state.walk() calls.
 	tree *tree
-}
-
-/********************************** Statics **********************************/
-
-// Takes a sample group of words, analyses their traits, and builds a State.
-func NewState(words []string) (*State, error) {
-	traits, err := NewTraits(words)
-	if err != nil {
-		return nil, err
-	}
-	state := &State{Traits: traits}
-	return state, nil
 }
 
 /********************************** Methods **********************************/
 
-/*--------------------------------- Public ----------------------------------*/
-
-// Generates the entire set of words defined by the state. The virtual pool of
-// words is shared with State.WordsN(). This method exhausts the pool
-// completely; subsequent calls to State.Words() and State.WordsN() return an
-// empty result.
-func (this *State) Words() (words Set) {
-	this.walkStraight(func(sounds ...string) {
-		words.Add(join(sounds, ""))
-	})
-	return
-}
-
-// Generates a randomly distributed subset of the set of words defined by the
-// state, limited to the given count. The words are guaranteed to never repeat.
-// The virtual pool of words is shared with State.Words(). Subsequent calls to
-// State.Words() are guaranteed to not include any of the words that have been
-// returned by State.WordsN(). If this is called enough times to exhaust the
-// entire pool, subsequent calls to State.Words() and State.WordsN() return an
-// empty result.
-func (this *State) WordsN(num int) (words Set) {
-	iterator := func(sounds ...string) {
-		words.Add(join(sounds, ""))
-	}
-	for i := 0; i < num; i++ {
-		this.trip(iterator)
-	}
-	return
-}
-
-/*--------------------------------- Private ---------------------------------*/
-
 // Walks the virtual tree of the state's traits, caching the visited parts in
 // the state's inner tree. This caching lets us skip repeated Traits.validPart()
-// checks, individual visited nodes, and fully visited subtrees. This has no
-// benefit for a one-shot traversal that visits the entire tree at once (see
-// State.Words()), but significantly speeds up traversals that restart from the
-// root after exiting early via panic (see State.trip()), and lets us avoid
-// revisiting nodes.
-//
-// This also randomises the order of visiting subtrees from each node.
-func (this *State) walk(iterator func(...string), sounds ...string) {
+// checks, individual visited nodes, and fully visited subtrees. This
+// significantly speeds up state.trip() traversals that restart from the root on
+// each call, and lets us avoid revisiting nodes. This method also randomises
+// the order of visiting subtrees from each node.
+func (this *state) walk(iterator func(...string), sounds ...string) {
 	if iterator == nil {
 		return
 	}
@@ -91,19 +39,24 @@ func (this *State) walk(iterator func(...string), sounds ...string) {
 	// nodes yet, make a shallow map to track valid paths.
 	node := this.tree.at(sounds...)
 	if node.nodes == nil {
-		node.nodes = sprout(this.Traits.PairSet, sounds...)
+		node.nodes = sprout(this.traits.PairSet, sounds...)
 	}
 
 	// Loop over remaining child nodes and investigate their subtrees.
 	for _, sound := range randNodeValues(node.nodes) {
+		// Appending to sounds mutates their underlying array unless their cap was
+		// <= 2 or so. If the iterator was expected to store sound slices, we would
+		// allocate a new array for each path to avoid unexpected mutations. Right
+		// now, we can get away with passing the slices as-is, because this method
+		// is not exposed publicly and our own iterators don't store slices.
 		path := append(sounds, sound)
 		// Invalidate the path if it doesn't qualify as a partial word.
-		if !this.Traits.validPart(path...) {
+		if !this.traits.validPart(path...) {
 			delete(node.nodes, sound)
 			continue
 		}
 		// (1)(2) -> pre-order, (2)(1) -> post-order. Post-order is required by
-		// State.walkRandom(); it slows down State.Words() by about 10-15%, which
+		// state.walkRandom(); it slows down state.Words() by about 10-15%, which
 		// doesn't warrant its own separate algorithm.
 		// (2) Continue recursively.
 		this.walk(iterator, path...)
@@ -116,24 +69,12 @@ func (this *State) walk(iterator func(...string), sounds ...string) {
 	}
 }
 
-// Walks the state's virtual tree, visiting paths that qualify as valid complete
-// words.
-func (this *State) walkStraight(iterator func(...string)) {
-	iter := func(sounds ...string) {
-		this.tree.at(sounds...).visited = true
-		if this.Traits.checkPart(sounds...) {
-			iterator(sounds...)
-		}
-	}
-	this.walk(iter)
-}
-
 // Walks the state's virtual tree; for each paths given to the wrapper function,
 // we visit its subpaths in random order, marking the corresponding nodes as
 // visited. For the distribution to be random, the tree needs to be traversed in
 // post-order. We only visit paths that qualify as valid complete words and
 // haven't been visited before.
-func (this *State) walkRandom(iterator func(...string)) {
+func (this *state) walkRandom(iterator func(...string)) {
 	iter := func(sounds ...string) {
 		for _, index := range permutate(len(sounds)) {
 			if index < 1 {
@@ -143,7 +84,7 @@ func (this *State) walkRandom(iterator func(...string)) {
 			node := this.tree.at(path...)
 			if !node.visited {
 				node.visited = true
-				if this.Traits.checkPart(path...) {
+				if this.traits.checkPart(path...) {
 					iterator(path...)
 				}
 			}
@@ -152,9 +93,9 @@ func (this *State) walkRandom(iterator func(...string)) {
 	this.walk(iter)
 }
 
-// Uses State.walkRandom() to traverse the tree and interrupts the walking after
+// Uses state.walkRandom() to traverse the tree and interrupts the walking after
 // one successful call to the given iterator function.
-func (this *State) trip(iterator func(...string)) {
+func (this *state) trip(iterator func(...string)) {
 	defer aid()
 	this.walkRandom(func(sounds ...string) {
 		iterator(sounds...)

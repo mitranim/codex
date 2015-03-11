@@ -2,8 +2,9 @@
 
 ## Description
 
-Generator of random synthetic words or names. Takes a sample provided by the
-user, analyses it, and produces a set of similar derived words.
+Generator of random synthetic words or names. Takes sample words, analyses them,
+and lazily produces a set of similar derived words. Works for
+[any language](#traitsexaminestring-error).
 
 Example program using `codex`:
 
@@ -16,25 +17,32 @@ import (
 )
 
 func main() {
-  source := []string{"jasmine", "katie", "nariko"}
+  source := []string{"jasmine", "katie", "nariko", "karen"}
 
-  sample, err := codex.WordsN(source, 12)
-  total, err := codex.Words(source)
-
-  fmt.Println(sample)
-  fmt.Println("total:", len(total))
-  fmt.Println(err)
-}
-
-// Printed results:
-/*
-  {
-    "inari", "tikarik", "karinat", "ariko", "minatik", "ikasmin",
-    "kasmine", "katiko", "rikasmi", "mikatin", "natie", "natika",
+  traits, err := codex.NewTraits(source)
+  if err != nil {
+    panic(err)
   }
-  total: 180
-  <nil>
-*/
+  gen := traits.Generator()
+
+  // Print twelve random words.
+  for i := 0; i < 12; i++ {
+    fmt.Println(gen())
+  }
+
+  // Printed (your result will be different):
+  //   jarik smiko ikatik arinat nasmin katie
+  //   rikatin smikas minena ikatin jasmika rinaren
+
+  // Find out how many words can be generated from this sample.
+  gen = traits.Generator()
+  i := 0
+  for gen() != "" {i++}
+  fmt.Println("total:", i)
+
+  // Printed:
+  //   total: 392
+}
 ```
 
 ## Contents
@@ -43,28 +51,17 @@ func main() {
 * [Contents](#contents)
 * [Installation](#installation)
 * [API Reference](#api-reference)
-  * [Words()](#wordsstring-set-error)
-  * [WordsN()](#wordsnstring-int-set-error)
   * [type Traits](#type-traits)
     * [NewTraits()](#newtraitsstring-traits-error)
-    * [Traits.Words()](#traitswords-set-error)
     * [Traits.Examine()](#traitsexaminestring-error)
-  * [type State](#type-state)
-    * [NewState()](#newstatestring-state-error)
-    * [State.Words()](#statewords-set)
-    * [State.WordsN()](#statewordsnint-set)
-  * [type Set](#type-set)
-    * [Set.New()](#setnew_-string-set)
-    * [Set.Has()](#sethasstring-bool)
-    * [Set.Add()](#setaddstring)
-    * [Set.Del()](#setdelstring)
+    * [Traits.Generator()](#traitsgenerator-func-string)
 * [ToDo / WIP](#todo--wip)
 
 ## Installation
 
 In a shell:
 
-```shell
+```sh
 go get github.com/Mitranim/codex
 ```
 
@@ -77,63 +74,39 @@ import (
 )
 
 func main() {
-  words, err := codex.Words([]string{"sample", "pair"})
-  fmt.Println(words, err)
+  traits, err := codex.NewTraits([]string{"sample", "pair"})
+  if err != nil {
+    panic(err)
+  }
+
+  gen := traits.Generator()
+  for word := gen(); word != ""; word = gen() {
+    fmt.Println(word)
+  }
 }
 ```
 
-To test the package, go into the package directory and run:
+To test the package, `cd` into the package directory and run:
 
-```shell
+```sh
 # Just tests
 go test
+```
+
+To run benchmarks:
+
+```sh
 # With benchmarks
 go test -bench .
 ```
 
 ## API Reference
 
-Most public functions exposed by the package take existing words as input. Words
-must consist of known glyphs, as defined by the sound sets in
-[`sounds.go`](sounds.go) or by custom sets passed into a Traits object (see the
+The entry point for everything is a `Traits` object. It takes existing words as
+input. Words must consist of known glyphs, as defined by the sound sets in
+[`sounds.go`](sounds.go) or by custom sets assigned to a traits struct (see the
 [reference](#type-traits)). If an invalid word is encountered, an error is
 returned.
-
-### `Words([]string) (Set, error)`
-
-Returns the entire set of synthetic words that may be derived from the given
-sample. Beware: passing more than just a handful of words leads to a
-combinatorial explosion and takes forever to calculate. This must only be used
-with miniscule datasets.
-
-This function is pure, meaning that repeated calls with the same dataset will
-yield the same (unordered) result.
-
-```golang
-words, err := Words([]string{"goblin", "smoke"})
-fmt.Println(words)
-// {"smobli", "smoblin", "smoke", "goke", "gobli", "moke", "mobli", "goblin", "obli", "oblin", "oke", "moblin"}
-```
-
-See the [`Set`](#type-set) reference for how to handle the results.
-
-### `WordsN([]string, int) (Set, error)`
-
-Returns a random sample from the set of synthetic words that may be derived from
-the given words, limited to the given count. The sequence is guaranteed to be
-duplicate-free.
-
-Unlike `Words()`, this remains very fast even for large source datasets, and is
-suitable for use on a web server or another application where responses must be
-quick.
-
-```golang
-words, err := WordsN([]string{"goblin", "smoke"}, 4)
-fmt.Println(words)
-// {"mobli", "smobli", "obli", "smoblin"}
-```
-
-See the [`Set`](#type-set) reference for how to handle the results.
 
 ### `type Traits`
 
@@ -154,217 +127,112 @@ type Traits struct {
   // Set of pairs of sounds that occur in the words.
   PairSet PairSet
 
-  // Replacement sound set to use instead of the default `knownSounds`.
+  // Optional custom set of known sounds.
   KnownSounds Set
-  // Replacement sound set to use instead of the default `knownVowels`.
+  // Optional custom set of known vowels.
   KnownVowels Set
 }
 ```
 
-`Traits` represent rudimental characteristics of a word or group of words, and
-are central to the package's functionality. Word generation always begins by
-examining the source words and extracting their shared traits.
+`Traits` represent rudimental characteristics of a word or group of words. A
+traits object unequivocally defines a set of synthetic words that may be derived
+from them. They're produced by a generator function made with
+[`Traits.Generator()`](#traitsgenerator-func-string).
 
-A traits object unequivocally defines a set of synthetic words that may be
-derived from them. This set may be retrieved with `Traits.Words()`.
-
-A traits object is stateless, and the `Traits.Words()` method is pure, meaning
-that is has no side effects and is guaranteed to produce the same (unordered)
-set on repeated calls for the same combination of traits. A transient traits
-object is used internally by the static `Words()` function.
-
-The fields `Traits.KnownSounds` and `Traits.KnownVowels` let you specify custom
-sets of sounds and vowels to recognise in words. This lets you make the package
-compatible with any character set, including non-Latin alphabets. See
-`Traits.Examine()`.
+The optional fields `KnownSounds` and `KnownVowels` specify custom sets of
+sounds and vowels. This lets you use `codex` for any character set, including
+non-Latin alphabets. See
+[`Traits.Examine()`](#traitsexaminestring-error).
 
 #### `NewTraits([]string) (*Traits, error)`
 
-Analyses the given group of sample words and returns a `Traits` object with
-their shared characteristics. After getting hold of a traits object, you can
-apply custom restrictions to its derived words by editing its fields. This is
-also true for a traits object embedded in a `State`.
+Shortcut for creating a `Traits` object and calling its `Examine()` method.
+These are equivalent:
 
 ```golang
 traits, err := NewTraits([]string{"mountain", "waterfall", "grotto"})
+
+traits := &Traits{}
+err := traits.Examine([]string{"mountain", "waterfall", "grotto"})
 ```
 
-#### `Traits.Words() (Set, error)`
-
-Generates and returns the entire set of synthetic words defined by the traits.
-See the notes to the [`Words()`](#wordsstring-set-error) function. This method
-is pure.
-
-```golang
-traits, err := NewTraits([]string{"goblin", "smoke"})
-words := traits.Words()
-fmt.Println(words)
-// {"smobli", "smoblin", "smoke", "goke", "gobli", "moke", "mobli", "goblin", "obli", "oblin", "oke", "moblin"}
-```
+Ignore this if you're using custom sound sets (e.g. non-Latin).
 
 #### `Traits.Examine([]string) error`
 
-Analyses the given group of sample words and merges their traits into the given
-traits object. This is useful when you want to create a traits object with
-custom `Traits.KnownSounds` and `Traits.KnownVowels` before analysing the source
-words.
+Analyses the given words and merges their attributes into self.
 
 ```golang
-traits := &Traits{KnownSounds: Set.New(nil, "ε", "λ", "η", "ν", "ι", "κ", "ά")}
-err := traits.Examine([]string{"ελ", "νικά"})
-fmt.Println(err)
-// <nil>
+traits := &Traits{}
+err := traits.Examine([]string{"mountain", "waterfall", "grotto"})
 ```
 
-### `type State`
+By default, this uses sets of known sounds and vowels defined in
+[`sounds.go`](sounds.go). This includes the 26 letters of the standard US
+English alphabet and some common digraphs like `th`, which are treated as single
+phonemes.
+
+However, `codex` is language-independent. Assign custom `KnownSounds` and
+`KnownVowels` to teach it a sound system of your choosing. It can be Greek or
+Cyrillic or Elvish or Clingon — doesn't matter as long as the given sounds and
+vowels cover the words in your input. Refer to [`sounds.go`](sounds.go) as an
+example.
+
+Here's how to teach it Greek:
 
 ```golang
-type State struct {
-  Traits *Traits
-  // unexported fields
+traits := &codex.Traits{
+  KnownSounds: codex.Set.New(nil,
+    "α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ",
+    "ν", "ξ", "ο", "π", "ρ", "σ", "ς", "τ", "υ", "φ", "χ", "ψ", "ω"),
+  KnownVowels: codex.Set.New(nil, "α", "ε", "η", "ι", "ο", "υ", "ω"),
 }
-```
 
-A `State` object is a superset of `Traits` that maintains an internal state.
-It's used for generating small samples from the set of synthetic words defined
-by its traits through its `State.WordsN()` method. Statefulness allows it to
-guarantee that no word is ever repeated. A state's generator methods share the
-same virtual pool of words, and may be used interchangeably until the entire set
-has been exhausted.
+traits.Examine([]string{"ελ", "διδασκω", "ελληνικο", "αλφαβητο"})
 
-A state must always be obtained through a `NewState()` call, or given a valid
-`Traits` object if created manually. Its behaviour without traits is undefined.
-Its internal `Traits` object may be edited to apply custom restrictions on the
-derived words.
-
-A transient state object is used internally by the static `WordsN()` function.
-
-Example of creating a new state with custom traits:
-
-```golang
-traits := &Traits{
-  KnownSounds: /* <custom sound glyphs> */,
-  KnownVowels: /* <custom vowel glyphs> */,
+gen := traits.Generator()
+for word := gen(); word != ""; word = gen() {
+  fmt.Println(word)
 }
-err := traits.Examine([]string{/* <sample words> */})
-state := &State{Traits: traits}
+
+// "ιδαλφ"
+// "κο"
+// "ηνικο"
+// ...
 ```
 
-#### `NewState([]string) (*State, error)`
+#### `Traits.Generator() func() string`
 
-Takes a group of sample words, generates their shared characteristics via
-`NewTraits()`, and makes a `State` object that encapsulates those traits.
+Creates a generator function that yields a new random synthetic word on each
+call. The words are guaranteed to never repeat, and to be randomly distributed
+across the total set of possible words for these traits.
 
-```golang
-state, err := NewState([]string{"lava", "ridge", "rock"})
-```
+After a generator is exhausted, subsequent calls return `""`.
 
-#### `State.Words() Set`
+A traits object is stateless, and `Generator()` produces a completely new
+generator on each call. Generators don't affect each other.
 
-Generates and returns the remainder of the set of synthetic words defined by the
-state's traits. Any words previously returned by the state's `State.WordsN()`
-method are withheld. If called immediately after creating the state, the result
-is guaranteed to be equivalent to `Words()` or `Traits.Words()` for the same
-source data, with roughly 2/3d the performance, give or take. It's also equally
-problematic for large datasets.
-
-This method exhausts the remainder of the state's word set, and subsequent calls
-to `State.Words()` or `State.WordsN()` return empty results.
+This remains fast even for large source datasets, and is suitable for use on web
+servers and in other applications where responses must be quick.
 
 ```golang
-state, err := NewState([]string{"goblin", "smoke"})
-fmt.Println(state.Words())
-// {"mobli", "smoke", "gobli", "smoblin", "goblin", "moblin", "moke", "obli", "oblin", "oke", "smobli", "goke"}
-```
+traits, err := codex.NewTraits([]string{"goblin", "smoke"})
+gen := traits.Generator()
 
-#### `State.WordsN(int) Set`
-
-Generates and returns a random sample from the set of synthetic words defined by
-the state's traits. Any words returned by this method are guaranteed to never
-repeat in subsequent calls to the state's `State.Words()` and `State.WordsN()`
-methods. If called enough times, this eventually exhausts the entire set of
-words defined by the state's traits, and subsequent calls return empty results.
-
-This method remains fast even for large source datasets, and is suitable for use
-on web servers and in other applications where responses must be quick.
-
-```golang
-state, err := NewState([]string{"goblin", "smoke"})
-fmt.Println(state.WordsN(7))
-fmt.Println(state.WordsN(7))
-fmt.Println(state.WordsN(7))
-
-// {"smoblin", "mobli", "smobli", "smoke", "moke", "goke", "oblin"}
-// {"moblin", "goblin", "obli", "oke", "gobli"}
-// {}
-```
-
-### `type Set`
-
-```golang
-type Set map[string]struct{}
-```
-
-Represents a set of strings. Generated words are always returned as a `Set`.
-
-Because it's a map, iterating over a `Set` is dead simple:
-
-```golang
-for word := range Set{} {
-  // do stuff
+for word := gen(); word != ""; word = gen() {
+  fmt.Print(word, " ")
 }
-```
 
-A `Set` is unordered. In fact, Go actively randomises map iteration order, but
-this is not always random enough. If you want to iterate over a set of words
-randomly, make a `State` object and use its `State.WordsN()` method, which is
-guaranteed to return random samples with no repeats.
-
-#### `Set.New(_, ...string) Set`
-
-Creates a Set with the given strings.
-
-```golang
-set := Set.New(nil, "one", "other" /*, ... */)
-```
-
-#### `Set.Has(string) bool`
-
-Checks if the set has the given string.
-
-```golang
-set := Set.New(nil, "icecream")
-set.Has("icecream") // true
-```
-
-#### `Set.Add(string)`
-
-Adds the given string to the set.
-
-```golang
-set := Set{}
-set.Add("sledges")
-set.Has("sledges") // true
-```
-
-#### `Set.Del(string)`
-
-Deletes the given string from the set.
-
-```golang
-set := Set.New(nil, "polaris")
-set.Del("polaris")
-set.Has("polaris") // false
+// moblin oblin mobli goblin smobli gobli smoke
+// this generator is exhausted
 ```
 
 ## ToDo / WIP
 
 ### Investigation
 
-Consider providing an option to enable reverse pairs for the `WordsN()` static
-function. Enabling it for `Words()` or `Traits` or `State` objects (where
-`Words()` could be called) is too hazardous, the combinatorial explosion goes
-beyond any reasonable measure.
+Consider providing an option to enable reverse pairs in `Traits.Examine()`.
+Check the performance impact, particularly with large datasets.
 
 ### Algorithms
 
@@ -372,14 +240,11 @@ Perhaps Traits.validPart() should also forbid repeated triples.
 
 ### Tests
 
-Random distribution test for `State.WordsN()` should verify that preceding calls
+Random distribution test for the generators should verify that preceding calls
 may return words that contain (starting at index 0) words returned from later
 calls.
 
 ### Readme
 
-Include examples of:
-  * using custom sets of known sounds and vowels, particularly non-Latin;
-  * modifying Traits fields to restrict word characteristics.
-
-Document what kind of input data is allowed.
+* Include examples of modifying Traits fields to restrict word characteristics.
+* Document what kind of input data is allowed.

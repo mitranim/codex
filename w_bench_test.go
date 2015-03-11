@@ -17,7 +17,7 @@ func Benchmark_NewTraits(b *testing.B) {
 	// b.SkipNow()
 
 	for i := 0; i < b.N; i++ {
-		NewTraits(defWords)
+		NewTraits(testDefWords)
 	}
 }
 
@@ -30,99 +30,52 @@ func Benchmark_NewTraits_LargeDataset(b *testing.B) {
 	}
 }
 
-// NewState()
-func Benchmark_NewState(b *testing.B) {
+// Traits.Generator() -> complete words set
+func Benchmark_Generator_All(b *testing.B) {
 	// b.SkipNow()
 
 	for i := 0; i < b.N; i++ {
-		NewState(defWords)
-	}
-}
-
-// Words()
-func Benchmark_Words(b *testing.B) {
-	// b.SkipNow()
-
-	for i := 0; i < b.N; i++ {
-		Words(defWords)
-	}
-}
-
-// Words() with a larger source dataset
-func Benchmark_Words_LargeDataset(b *testing.B) {
-	// b.SkipNow()
-
-	for i := 0; i < b.N; i++ {
-		Words(testManyWords)
-	}
-}
-
-// WordsN()
-func Benchmark_WordsN(b *testing.B) {
-	// b.SkipNow()
-
-	for i := 0; i < b.N; i++ {
-		WordsN(defWords, defCount)
-	}
-}
-
-// WordsN() with a larger source dataset
-func Benchmark_WordsN_LargeDataset(b *testing.B) {
-	// b.SkipNow()
-
-	for i := 0; i < b.N; i++ {
-		WordsN(testManyWords, defCount)
-	}
-}
-
-// Traits.Words()
-func Benchmark_Traits_Words(b *testing.B) {
-	// b.SkipNow()
-
-	traits, _ := NewTraits(defWords)
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		traits.Words()
-	}
-}
-
-// NewState() && State.Words()
-func Benchmark_NewState_State_Words(b *testing.B) {
-	// b.SkipNow()
-
-	for i := 0; i < b.N; i++ {
-		state, _ := NewState(defWords)
-		state.Words()
-	}
-}
-
-// State.WordsN()
-func Benchmark_State_WordsN(b *testing.B) {
-	// b.SkipNow()
-
-	state, _ := NewState(defWords)
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		if len(state.WordsN(defCount)) == 0 {
-			state, _ = NewState(defWords)
-			state.WordsN(defCount)
+		traits, _ := NewTraits(testDefWords)
+		gen := traits.Generator()
+		for gen() != "" {
 		}
 	}
 }
 
-// State.WordsN() with a larger source dataset
-func Benchmark_State_WordsN_LargeDataset(b *testing.B) {
+// Large source dataset -> Traits.Generator() -> complete words set
+func Benchmark_Generator_All_LargeDataset(b *testing.B) {
 	// b.SkipNow()
 
-	state, _ := NewState(testManyWords)
-	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		traits, _ := NewTraits(testManyWords)
+		gen := traits.Generator()
+		for gen() != "" {
+		}
+	}
+}
+
+// Traits.Generator() -> generate default count
+func Benchmark_Generator_N(b *testing.B) {
+	// b.SkipNow()
 
 	for i := 0; i < b.N; i++ {
-		if len(state.WordsN(defCount)) == 0 {
-			state, _ = NewState(testManyWords)
-			state.WordsN(defCount)
+		traits, _ := NewTraits(testDefWords)
+		gen := traits.Generator()
+		for i := 0; i < testDefCount; i++ {
+			gen()
+		}
+	}
+}
+
+// Large source dataset -> Traits.Generator() -> generate default count
+func Benchmark_Generator_N_LargeDataset(b *testing.B) {
+	// b.SkipNow()
+
+	for i := 0; i < b.N; i++ {
+		traits, _ := NewTraits(testManyWords)
+		gen := traits.Generator()
+		for i := 0; i < testDefCount; i++ {
+			gen()
 		}
 	}
 }
