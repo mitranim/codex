@@ -56,32 +56,6 @@ func validLength(word string) bool {
 	return len(word) > 1 && len(word) < 33
 }
 
-// Returns the set of first values from the given pairs as a slice.
-func firstValues(pairs PairSet) (results []string) {
-	values := Set{}
-	for pair := range pairs {
-		values.Add(pair[0])
-	}
-	results = make([]string, 0, len(values))
-	for value := range values {
-		results = append(results, value)
-	}
-	return
-}
-
-// Returns the set of second values from the given pairs that begin with the
-// given first value as a slice.
-func secondMatching(pairs PairSet, first string) (results []string) {
-	results = []string{}
-	for pair := range pairs {
-		if pair[0] != first {
-			continue
-		}
-		results = append(results, pair[1])
-	}
-	return
-}
-
 // Copy of Join from the standard package `strings`.
 func join(a []string, sep string) string {
 	if len(a) == 0 {
@@ -158,6 +132,35 @@ func aid() {
 	}
 }
 
+// Creates shallow child nodes for a tree from the given pairs on the given
+// path.
+func sprout(pairs PairSet, path ...string) (nodes map[string]*tree) {
+	nodes = map[string]*tree{}
+	if len(path) == 0 {
+		// If no sound were passed, start from the root.
+		for pair := range pairs {
+			if _, ok := nodes[pair[0]]; ok {
+				continue
+			}
+			nodes[pair[0]] = nil
+		}
+		// Otherwise continue from the given path.
+	} else {
+		// [ ... sounds ... ( last sound ] <- pair -> next sound )
+		//
+		// We investigate pairs that begin with the last sound of the given
+		// preceding sounds. Their second sounds form a set that, when individually
+		// appended to the preceding sounds, form foundation paths for child
+		// subtrees. We register these second sounds on the child node map.
+		for pair := range pairs {
+			if pair[0] == path[len(path)-1] {
+				nodes[pair[1]] = nil
+			}
+		}
+	}
+	return
+}
+
 /********************************** PairSet **********************************/
 
 /**
@@ -203,4 +206,30 @@ type errType string
 
 func (this errType) Error() string {
 	return string(this)
+}
+
+/*********************************** tree ************************************/
+
+// A tree that defines a set of string sequences. Node values represent sounds.
+// A sequence of sounds obtained by visiting a branch represents a part of a
+// word or a complete word (the distinction is defined by Traits). We define a
+// tree as unordered, regardless of the implementation.
+type tree struct {
+	// The node's children, stored as a map where keys are children's values.
+	nodes map[string]*tree
+	// True if this node has been visited by an iterator.
+	visited bool
+}
+
+// Finds or creates a node under the given path. Each value in the path
+// represents a value of a descendant node.
+func (this *tree) at(path ...string) (node *tree) {
+	node = this
+	for _, value := range path {
+		if node.nodes[value] == nil {
+			node.nodes[value] = new(tree)
+		}
+		node = node.nodes[value]
+	}
+	return
 }

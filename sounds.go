@@ -2,24 +2,20 @@ package codex
 
 // Defines known sounds.
 
-// Glyphs used in English to directly represent some phonemes. This does not
-// reflect all phonemes used in English (not even near...).
+// Glyphs and digraphs in common English use. This doesn't represent all common
+// phonemes.
 var knownSounds = Set.New(nil,
 	// Digraphs
-	"ae", "ch", "sh", "th", "zh",
-	// English alphabet monographs
+	"ae", "ch", "ng", "ph", "sh", "th", "zh",
+	// ISO basic Latin monographs
 	"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
 	"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-	// Some other Latin monographs
-	"æ",
 )
 
-// Vowel glyphs used in English.
+// Vowel glyphs and digraphs in common English use.
 var knownVowels = Set.New(nil,
 	// Digraphs
 	"ae",
-	// English alphabet monographs
+	// ISO basic Latin monographs
 	"a", "e", "i", "o", "u", "y",
-	// Some other Latin monographs
-	"æ",
 )
