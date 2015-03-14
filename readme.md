@@ -6,6 +6,9 @@ Generator of random synthetic words or names. Takes sample words, analyses them,
 and lazily produces a set of similar derived words. Works for
 [any language](#traitsexaminestring-error).
 
+Has a JavaScript port with about half the performance:
+[`foliant`](https://github.com/Mitranim/foliant).
+
 Example program using `codex`:
 
 ```golang
@@ -167,7 +170,7 @@ traits := &Traits{}
 err := traits.Examine([]string{"mountain", "waterfall", "grotto"})
 ```
 
-By default, this uses sets of known sounds and vowels defined in
+By default, this uses the sets of known sounds and vowels defined in
 [`sounds.go`](sounds.go). This includes the 26 letters of the standard US
 English alphabet and some common digraphs like `th`, which are treated as single
 phonemes.

@@ -222,7 +222,7 @@ func (this *Traits) validPart(sounds ...string) bool {
 		}
 	}
 
-	// Checks if the pair sequence is valid per Traits.validPairs.
+	// Check if the pair sequence is valid per Traits.validPairs.
 	if len(sounds) > 1 && !this.validPairs(sounds) {
 		return false
 	}
