@@ -294,7 +294,7 @@ func (this *Traits) validPairs(sounds []string) bool {
 		// Check for condition (3). Originally we used a map of pairs to count pair
 		// occurrences. This version is a performance optimisation, runs about
 		// several dozen times faster for small datasets.
-		if countPair(sounds[:index], prev, current) > 2 {
+		if countPair(sounds[:index+1], prev, current) > 2 {
 			return false
 		}
 
