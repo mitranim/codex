@@ -56,8 +56,7 @@ func (this *state) walk(iterator func(...string), sounds ...string) {
 			continue
 		}
 		// (1)(2) -> pre-order, (2)(1) -> post-order. Post-order is required by
-		// state.walkRandom(); it slows down state.Words() by about 10-15%, which
-		// doesn't warrant its own separate algorithm.
+		// state.walkRandom().
 		// (2) Continue recursively.
 		this.walk(iterator, path...)
 		// (1) If this path hasn't yet been visited, feed it to the iterator.
@@ -69,7 +68,7 @@ func (this *state) walk(iterator func(...string), sounds ...string) {
 	}
 }
 
-// Walks the state's virtual tree; for each paths given to the wrapper function,
+// Walks the state's virtual tree; for each path given to the wrapper function,
 // we visit its subpaths in random order, marking the corresponding nodes as
 // visited. For the distribution to be random, the tree needs to be traversed in
 // post-order. We only visit paths that qualify as valid complete words and

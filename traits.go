@@ -120,7 +120,7 @@ func (this *Traits) examineWord(word string) error {
 		return errType("less than two sounds found")
 	}
 
-	// Merge min and max number of consequtive sounds.
+	// Merge min and max total number of sounds.
 	n := len(sounds)
 	if this.MinNSounds == 0 || n < this.MinNSounds {
 		this.MinNSounds = n
@@ -150,7 +150,7 @@ func (this *Traits) examineWord(word string) error {
 		this.MaxConseqCons = n
 	}
 
-	// Merge set of used sounds.
+	// Merge set of sounds.
 	if this.SoundSet == nil {
 		this.SoundSet = Set.New(nil, sounds...)
 	} else {
@@ -159,7 +159,7 @@ func (this *Traits) examineWord(word string) error {
 		}
 	}
 
-	// Find set of pairs of sounds.
+	// Merge set of pairs of sounds.
 	if this.PairSet == nil {
 		this.PairSet = getPairs(sounds)
 	} else {
