@@ -1,5 +1,9 @@
 package codex
 
+import (
+	"errors"
+)
+
 /**
  * The Traits type defines traits that characterise a word or group of words.
  * A valid Traits object can produce a generator that makes random
@@ -70,7 +74,7 @@ type Traits struct {
 // Examines a slice of words and merges their traits into self.
 func (this *Traits) Examine(words []string) error {
 	if this == nil {
-		return errType("can't examine with nil pointer")
+		return errors.New("can't examine with nil pointer")
 	}
 
 	// Examine each word and merge traits.
@@ -88,10 +92,13 @@ func (this *Traits) Examine(words []string) error {
 // word set. When the set is exhausted, further calls return "".
 func (this *Traits) Generator() func() string {
 	st := &state{traits: this}
-	return func() (result string) {
-		// The trip iterator is not invoked after the state has been exhausted.
-		st.trip(func(sounds ...string) { result = join(sounds, "") })
-		return
+	return func() string {
+		var out string
+		st.walkRandom(func(sounds ...string) bool {
+			out = join(sounds, "")
+			return false
+		})
+		return out
 	}
 }
 
@@ -101,12 +108,12 @@ func (this *Traits) Generator() func() string {
 // word doesn't satisfy our limitations, returns an error.
 func (this *Traits) examineWord(word string) error {
 	if this == nil {
-		return errType("can't examine with nil pointer")
+		return errors.New("can't examine with nil pointer")
 	}
 
 	// Make sure the length is okay.
 	if !validLength(word) {
-		return errType("the word is too short or too long")
+		return errors.New("the word is too short or too long")
 	}
 
 	// Split into sounds.
@@ -117,7 +124,7 @@ func (this *Traits) examineWord(word string) error {
 
 	// Mandate that at least two sounds are found.
 	if len(sounds) < 2 {
-		return errType("less than two sounds found")
+		return errors.New("less than two sounds found")
 	}
 
 	// Merge min and max total number of sounds.

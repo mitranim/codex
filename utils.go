@@ -3,6 +3,7 @@ package codex
 // Utility functions and types.
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 )
@@ -10,6 +11,7 @@ import (
 /********************************* Utilities *********************************/
 
 // Seed the random generator.
+// FIXME redo the API to accept this as input instead of a global.
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -28,7 +30,7 @@ func getSounds(word string, known Set) ([]string, error) {
 			sounds = append(sounds, word[i:i+1])
 			// Otherwise return an error.
 		} else {
-			return nil, errType("encountered unknown symbol")
+			return nil, errors.New("encountered unknown symbol")
 		}
 	}
 	// Return the found glyphs.
@@ -78,7 +80,6 @@ func join(a []string, sep string) string {
 	return string(b)
 }
 
-// Republished rand.Perm.
 func permutate(length int) []int {
 	return rand.Perm(length)
 }
@@ -114,22 +115,6 @@ func randNodeValues(nodes map[string]*tree) (result []string) {
 	}
 	shuffle(result)
 	return
-}
-
-// Panic message used when breaking out from recursive iterations early.
-const panicMsg = "early exit through panic"
-
-// Wrapper for panic used when breaking out from recursive iterations early.
-func interrupt() {
-	panic(panicMsg)
-}
-
-// Wrapper for recovery from early iteration breakout through panic.
-func aid() {
-	msg := recover()
-	if msg != nil && msg != panicMsg {
-		panic(msg)
-	}
 }
 
 // Creates shallow child nodes for a tree from the given pairs on the given
@@ -198,14 +183,6 @@ func (this *PairSet) Del(key [2]string) {
 func (this *PairSet) Has(key [2]string) bool {
 	_, ok := (*this)[key]
 	return ok
-}
-
-/********************************** errType **********************************/
-
-type errType string
-
-func (this errType) Error() string {
-	return string(this)
 }
 
 /*********************************** tree ************************************/

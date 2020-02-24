@@ -24,13 +24,10 @@ type state struct {
 // Walks the virtual tree of the state's traits, caching the visited parts in
 // the state's inner tree. This caching lets us skip repeated Traits.validPart()
 // checks, individual visited nodes, and fully visited subtrees. This
-// significantly speeds up state.trip() traversals that restart from the root on
-// each call, and lets us avoid revisiting nodes. This method also randomises
-// the order of visiting subtrees from each node.
-func (this *state) walk(iterator func(...string), sounds ...string) {
-	if iterator == nil {
-		return
-	}
+// significantly speeds up state traversals that restart from the root on each
+// call, and lets us avoid revisiting nodes. This method also randomises the
+// order of visiting subtrees from each node.
+func (this *state) walk(iterator func(...string) bool, sounds ...string) bool {
 	if this.tree == nil {
 		this.tree = new(tree)
 	}
@@ -58,14 +55,20 @@ func (this *state) walk(iterator func(...string), sounds ...string) {
 		// (1)(2) -> pre-order, (2)(1) -> post-order. Post-order is required by
 		// state.walkRandom().
 		// (2) Continue recursively.
-		this.walk(iterator, path...)
+		if !this.walk(iterator, path...) {
+			return false
+		}
 		// (1) If this path hasn't yet been visited, feed it to the iterator.
 		if !node.at(sound).visited {
-			iterator(path...)
+			if !iterator(path...) {
+				return false
+			}
 		}
 		// If this code is reached, the subtree is used up, so we forget about it.
 		delete(node.nodes, sound)
 	}
+
+	return true
 }
 
 // Walks the state's virtual tree; for each path given to the wrapper function,
@@ -73,8 +76,8 @@ func (this *state) walk(iterator func(...string), sounds ...string) {
 // visited. For the distribution to be random, the tree needs to be traversed in
 // post-order. We only visit paths that qualify as valid complete words and
 // haven't been visited before.
-func (this *state) walkRandom(iterator func(...string)) {
-	iter := func(sounds ...string) {
+func (this *state) walkRandom(iterator func(...string) bool) bool {
+	return this.walk(func(sounds ...string) bool {
 		for _, index := range permutate(len(sounds)) {
 			if index < 1 {
 				continue
@@ -84,20 +87,12 @@ func (this *state) walkRandom(iterator func(...string)) {
 			if !node.visited {
 				node.visited = true
 				if this.traits.checkPart(path...) {
-					iterator(path...)
+					if !iterator(path...) {
+						return false
+					}
 				}
 			}
 		}
-	}
-	this.walk(iter)
-}
-
-// Uses state.walkRandom() to traverse the tree and interrupts the walking after
-// one successful call to the given iterator function.
-func (this *state) trip(iterator func(...string)) {
-	defer aid()
-	this.walkRandom(func(sounds ...string) {
-		iterator(sounds...)
-		interrupt()
+		return true
 	})
 }

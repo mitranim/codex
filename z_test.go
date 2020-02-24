@@ -43,37 +43,37 @@ func Test_NewTraits(t *testing.T) {
 	tmust(t, err)
 
 	if traits == nil {
-		t.Fatal("!! missing traits object")
+		t.Fatal("missing traits object")
 	}
 
 	// MinNSounds
 	if traits.MinNSounds != 5 {
-		t.Fatalf("!! MinNSounds mismatch: expected %v, got %v", 5, traits.MinNSounds)
+		t.Fatalf("MinNSounds mismatch: expected %v, got %v", 5, traits.MinNSounds)
 	}
 
 	// MaxNSounds
 	if traits.MaxNSounds != 6 {
-		t.Fatalf("!! MaxNSounds mismatch: expected %v, got %v", 6, traits.MaxNSounds)
+		t.Fatalf("MaxNSounds mismatch: expected %v, got %v", 6, traits.MaxNSounds)
 	}
 
 	// MinNVowels
 	if traits.MinNVowels != 2 {
-		t.Fatalf("!! MinNVowels mismatch: expected %v, got %v", 2, traits.MinNVowels)
+		t.Fatalf("MinNVowels mismatch: expected %v, got %v", 2, traits.MinNVowels)
 	}
 
 	// MaxNVowels
 	if traits.MaxNVowels != 2 {
-		t.Fatalf("!! MaxNVowels mismatch: expected %v, got %v", 2, traits.MaxNVowels)
+		t.Fatalf("MaxNVowels mismatch: expected %v, got %v", 2, traits.MaxNVowels)
 	}
 
 	// MaxConseqVow
 	if traits.MaxConseqVow != 1 {
-		t.Fatalf("!! MaxConseqVow mismatch: expected %v, got %v", 1, traits.MaxConseqVow)
+		t.Fatalf("MaxConseqVow mismatch: expected %v, got %v", 1, traits.MaxConseqVow)
 	}
 
 	// MaxConseqCons
 	if traits.MaxConseqCons != 2 {
-		t.Fatalf("!! MaxConseqCons mismatch: expected %v, got %v", 2, traits.MaxConseqCons)
+		t.Fatalf("MaxConseqCons mismatch: expected %v, got %v", 2, traits.MaxConseqCons)
 	}
 
 	// SoundSet
@@ -86,7 +86,7 @@ func Test_NewTraits(t *testing.T) {
 		}
 	}
 	if !reflect.DeepEqual(traits.SoundSet, sounds) {
-		t.Fatalf("!! SoundSet mismatch")
+		t.Fatalf("SoundSet mismatch")
 	}
 
 	// PairSet
@@ -99,7 +99,7 @@ func Test_NewTraits(t *testing.T) {
 		}
 	}
 	if !reflect.DeepEqual(traits.PairSet, pairs) {
-		t.Fatalf("!! PairSet mismatch")
+		t.Fatalf("PairSet mismatch")
 	}
 }
 
@@ -112,11 +112,11 @@ func Test_Traits_Generator(t *testing.T) {
 	gen := traits.Generator()
 
 	if gen == nil {
-		t.Fatal("!! missing generator function")
+		t.Fatal("missing generator function")
 	}
 
 	if gen() == "" {
-		t.Fatal("!! no output received from generator")
+		t.Fatal("no output received from generator")
 	}
 }
 
@@ -136,10 +136,10 @@ func Test_Generator(t *testing.T) {
 		sounds, err := getSounds(word, traits.knownSounds())
 		tmust(t, err)
 		if !traits.validComplete(sounds...) {
-			t.Fatal("!! invalid output from generator:", word)
+			t.Fatal("invalid output from generator:", word)
 		}
 		if words.Has(word) {
-			t.Fatal("!! repeated output from generator:", word)
+			t.Fatal("repeated output from generator:", word)
 		}
 		words.Add(word)
 	}
@@ -147,11 +147,11 @@ func Test_Generator(t *testing.T) {
 	// The output for a dozen source words can easily reach tens of thousands of
 	// results. We're being very conservative here.
 	if len(words) < 100 {
-		t.Fatal("!! unexpectedly small number of words:", len(words))
+		t.Fatal("unexpectedly small number of words:", len(words))
 	}
 
-	// t.Log("-- total words in sample:", len(words))
-	// t.Log("-- words in sample:", words)
+	// t.Log("total words in sample:", len(words))
+	// t.Log("words in sample:", words)
 }
 
 // Verifies that the words returned from a generator match its source traits.
@@ -180,7 +180,7 @@ func Test_Invalid_Input(t *testing.T) {
 	for _, invalid := range invalids {
 		traits, err := NewTraits([]string{invalid})
 		if traits != nil || err == nil {
-			t.Fatalf("!! expected nil traits and non-nil error, got %v and %v", traits, err)
+			t.Fatalf("expected nil traits and non-nil error, got %v and %v", traits, err)
 		}
 	}
 }
@@ -197,11 +197,11 @@ func Test_Traits_Examine(t *testing.T) {
 	other, _ := NewTraits(testDefWords)
 
 	if !reflect.DeepEqual(traits, other) {
-		t.Fatal("!! expected new(Traits) + Traits.Examine() to be equivalent to NewTraits()")
+		t.Fatal("expected new(Traits) + Traits.Examine() to be equivalent to NewTraits()")
 	}
 
 	if !reflect.DeepEqual(collectAll(traits), collectAll(other)) {
-		t.Fatal("!! expected resulting word sets to be equivalent")
+		t.Fatal("expected resulting word sets to be equivalent")
 	}
 }
 
@@ -218,11 +218,11 @@ func Test_Traits_KnownSounds(t *testing.T) {
 	)
 
 	if reflect.DeepEqual(traits.knownSounds(), knownSounds) {
-		t.Fatal("!! expected Traits.knownSounds() to return the internal sound set")
+		t.Fatal("expected Traits.knownSounds() to return the internal sound set")
 	}
 
 	if traits.Examine(testDefWords) == nil {
-		t.Fatal("!! expected Traits.Examine() to fail when used with a limited sound set")
+		t.Fatal("expected Traits.Examine() to fail when used with a limited sound set")
 	}
 }
 
@@ -240,20 +240,20 @@ func Test_Traits_KnownVowels(t *testing.T) {
 	)
 
 	if reflect.DeepEqual(traits.knownVowels(), knownVowels) {
-		t.Fatal("!! expected Traits.knownVowels() to return the internal vowel set")
+		t.Fatal("expected Traits.knownVowels() to return the internal vowel set")
 	}
 
 	if traits.Examine(testDefWords) != nil {
-		t.Fatal("!! expected Traits.Examine() to complete successfully when used with a limited vowel set")
+		t.Fatal("expected Traits.Examine() to complete successfully when used with a limited vowel set")
 	}
 
 	other, _ := NewTraits(testDefWords)
 	if reflect.DeepEqual(traits, other) {
-		t.Fatalf("!! expected Traits.Examine() with custom vowels to produce different traits")
+		t.Fatalf("expected Traits.Examine() with custom vowels to produce different traits")
 	}
 
 	if reflect.DeepEqual(collectAll(traits), collectAll(other)) {
-		t.Fatal("!! expected resulting word sets to be different")
+		t.Fatal("expected resulting word sets to be different")
 	}
 }
 
@@ -303,7 +303,7 @@ func Test_Generator_Random_Distribution(t *testing.T) {
 	}
 
 	if count > maxTightGroups {
-		t.Fatalf("!! for %v sorted words, %v out of %v samples were tightly grouped", len(words), count, len(words)/testDefCount+1)
+		t.Fatalf("for %v sorted words, %v out of %v samples were tightly grouped", len(words), count, len(words)/testDefCount+1)
 	}
 }
 
@@ -316,45 +316,45 @@ func test_Words_Match_Traits(t *testing.T, traits *Traits, words Set) {
 		sounds, err := getSounds(word, traits.knownSounds())
 		tmust(t, err)
 		if len(sounds) < traits.MinNSounds {
-			t.Fatalf("!! \"%v\" MinNSounds mismatch: expected >=%v, got %v", word, traits.MinNSounds, len(sounds))
+			t.Fatalf("\"%v\" MinNSounds mismatch: expected >=%v, got %v", word, traits.MinNSounds, len(sounds))
 		}
 
 		// MaxNSounds
 		if len(sounds) > traits.MaxNSounds {
-			t.Fatalf("!! \"%v\" MaxNSounds mismatch: expected <=%v, got %v", word, traits.MaxNSounds, len(sounds))
+			t.Fatalf("\"%v\" MaxNSounds mismatch: expected <=%v, got %v", word, traits.MaxNSounds, len(sounds))
 		}
 
 		// MinNVowels
 		if n := traits.countVowels(sounds); n < traits.MinNVowels {
-			t.Fatalf("!! \"%v\" MinNVowels mismatch: expected >=%v, got %v", word, traits.MinNVowels, n)
+			t.Fatalf("\"%v\" MinNVowels mismatch: expected >=%v, got %v", word, traits.MinNVowels, n)
 		}
 
 		// MaxNVowels
 		if n := traits.countVowels(sounds); n > traits.MaxNVowels {
-			t.Fatalf("!! \"%v\" MaxNVowels mismatch: expected <=%v, got %v", word, traits.MaxNVowels, n)
+			t.Fatalf("\"%v\" MaxNVowels mismatch: expected <=%v, got %v", word, traits.MaxNVowels, n)
 		}
 
 		// MaxConseqVow
 		if n := traits.maxConsequtiveVowels(sounds); n > traits.MaxConseqVow {
-			t.Fatalf("!! \"%v\" MaxConseqVow mismatch: expected <=%v, got %v", word, traits.MaxConseqVow, n)
+			t.Fatalf("\"%v\" MaxConseqVow mismatch: expected <=%v, got %v", word, traits.MaxConseqVow, n)
 		}
 
 		// MaxConseqCons
 		if n := traits.maxConsequtiveConsonants(sounds); n > traits.MaxConseqCons {
-			t.Fatalf("!! \"%v\" MaxConseqCons mismatch: expected <=%v, got %v", word, traits.MaxConseqCons, n)
+			t.Fatalf("\"%v\" MaxConseqCons mismatch: expected <=%v, got %v", word, traits.MaxConseqCons, n)
 		}
 
 		// SoundSet
 		for sound := range Set.New(nil, sounds...) {
 			if !traits.SoundSet.Has(sound) {
-				t.Fatalf("!! \"%v\" SoundSet mismatch, unexpected sound: %v", word, sound)
+				t.Fatalf("\"%v\" SoundSet mismatch, unexpected sound: %v", word, sound)
 			}
 		}
 
 		// PairSet
 		for pair := range getPairs(sounds) {
 			if !traits.PairSet.Has(pair) {
-				t.Fatalf("!! \"%v\" PairSet mismatch, unexpected pair: %v", word, pair)
+				t.Fatalf("\"%v\" PairSet mismatch, unexpected pair: %v", word, pair)
 			}
 		}
 	}
